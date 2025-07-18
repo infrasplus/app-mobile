@@ -22,7 +22,10 @@ const Notifications = () => {
       message: 'URGENTE: Maik • (62) 93434-191 relatou uma emergência médica/complicação. Clique para abrir a conversa.',
       time: '1h atrás',
       priority: 'high',
-      borderColor: 'border-l-red-500'
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-900',
+      iconColor: 'text-red-600'
     },
     {
       id: 2,
@@ -32,7 +35,10 @@ const Notifications = () => {
       message: 'URGENTE: Raphael • (62) 93681-828 relatou uma emergência médica/complicação. Clique para abrir a conversa.',
       time: '2h atrás',
       priority: 'high',
-      borderColor: 'border-l-red-500'
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-900',
+      iconColor: 'text-red-600'
     },
     {
       id: 3,
@@ -42,7 +48,10 @@ const Notifications = () => {
       message: 'O contato Raphael • (62) 93681-828 possivelmente é um fornecedor oferecendo produtos/serviços. Clique para abrir a conversa.',
       time: '7h atrás',
       priority: 'medium',
-      borderColor: 'border-l-blue-500'
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+      textColor: 'text-blue-900',
+      iconColor: 'text-blue-600'
     },
     {
       id: 4,
@@ -52,7 +61,10 @@ const Notifications = () => {
       message: 'Paciente demonstrou insatisfação com o atendimento. Atenção necessária.',
       time: '1 dia atrás',
       priority: 'medium',
-      borderColor: 'border-l-orange-500'
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-200',
+      textColor: 'text-orange-900',
+      iconColor: 'text-orange-600'
     },
     {
       id: 5,
@@ -62,7 +74,10 @@ const Notifications = () => {
       message: 'Paciente está solicitando reembolso do procedimento realizado.',
       time: '2 dias atrás',
       priority: 'medium',
-      borderColor: 'border-l-yellow-500'
+      bgColor: 'bg-yellow-50',
+      borderColor: 'border-yellow-200',
+      textColor: 'text-yellow-900',
+      iconColor: 'text-yellow-600'
     },
     {
       id: 6,
@@ -72,7 +87,10 @@ const Notifications = () => {
       message: 'Lead muito importante detectado. Dar atenção especial ao atendimento.',
       time: '3 dias atrás',
       priority: 'high',
-      borderColor: 'border-l-purple-500'
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
+      textColor: 'text-purple-900',
+      iconColor: 'text-purple-600'
     }
   ];
 
@@ -101,23 +119,23 @@ const Notifications = () => {
             return (
               <Card 
                 key={notification.id}
-                className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${notification.borderColor}`}
+                className={`cursor-pointer hover:shadow-md transition-shadow ${notification.bgColor} ${notification.borderColor}`}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <IconComponent className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <IconComponent className={`h-5 w-5 ${notification.iconColor} flex-shrink-0 mt-0.5`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-medium text-foreground">
+                        <h3 className={`font-medium ${notification.textColor}`}>
                           {notification.title}
                         </h3>
                         {getPriorityBadge(notification.priority)}
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">
+                      <p className={`text-sm ${notification.textColor} opacity-90 mb-2`}>
                         {notification.message}
                       </p>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
+                        <span className={`text-xs ${notification.textColor} opacity-70`}>
                           {notification.time}
                         </span>
                       </div>

@@ -23,7 +23,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
-  const clinicName = "Dra. Aline Bianchi";
+  const clinicName = "Clínica Exemplo";
   const whatsappConnected = Math.random() > 0.5; // Simula conexão aleatória
 
   useEffect(() => {
