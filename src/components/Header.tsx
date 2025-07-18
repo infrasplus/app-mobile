@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import logoImage from '@/assets/logo.png';
 
 export const Header = () => {
   const { clinicName, whatsappConnected } = useAuth();
@@ -7,6 +8,7 @@ export const Header = () => {
     <header className="bg-background border-b border-border p-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
+          <img src={logoImage} alt="Logo" className="h-6 w-6" />
           <div className="font-bold text-lg">SECRETÁRIA</div>
           <div className="bg-accent px-2 py-1 text-xs font-medium text-primary italic">
             PLUS
