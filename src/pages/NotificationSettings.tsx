@@ -12,6 +12,7 @@ const NotificationSettings = () => {
   
   const [notifications, setNotifications] = useState({
     emergency: true,
+    appointment: true,
     complaint: true,
     refund: true,
     nonExistentProcedure: false,
@@ -27,6 +28,11 @@ const NotificationSettings = () => {
       key: 'emergency',
       title: 'Emergências Médicas',
       description: 'Quando um paciente relata emergência ou intercorrência médica'
+    },
+    {
+      key: 'appointment',
+      title: 'Consultas Agendadas',
+      description: 'Quando uma nova consulta é agendada com sucesso'
     },
     {
       key: 'complaint',

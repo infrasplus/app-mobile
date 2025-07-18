@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Bell, 
   Calendar, 
-  Bot, 
+  Sparkles, 
   ChevronRight, 
   Clock,
   Users,
@@ -181,7 +181,7 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5" />
+              <Sparkles className="h-5 w-5" />
               Editar sua IA
             </CardTitle>
           </CardHeader>
