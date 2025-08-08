@@ -9,7 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import NotificationSettings from "./pages/NotificationSettings";
-import Agenda from "./pages/Agenda";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,14 +69,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <NotificationSettings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/agenda" 
-              element={
-                <ProtectedRoute>
-                  <Agenda />
                 </ProtectedRoute>
               } 
             />

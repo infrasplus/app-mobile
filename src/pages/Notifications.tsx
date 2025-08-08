@@ -1,13 +1,11 @@
 import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
 import { 
   AlertTriangle, 
   MessageSquare, 
   DollarSign, 
-  Clock, 
-  TrendingUp,
   Package,
   UserCheck,
   CalendarCheck
@@ -22,7 +20,7 @@ const Notifications = () => {
       title: 'Emergência Médica',
       message: 'URGENTE: Maik • (62) 93434-191 relatou uma emergência médica/complicação. Clique para abrir a conversa.',
       time: '1h atrás',
-      borderColor: 'border-l-red-300'
+      barClass: 'bg-error/30'
     },
     {
       id: 2,
@@ -31,7 +29,7 @@ const Notifications = () => {
       title: 'Consulta Agendada',
       message: 'Nova consulta agendada com sucesso para Maria Silva • (62) 99999-9999.',
       time: '1h atrás',
-      borderColor: 'border-l-green-300'
+      barClass: 'bg-success/30'
     },
     {
       id: 3,
@@ -40,7 +38,7 @@ const Notifications = () => {
       title: 'Emergência Médica',
       message: 'URGENTE: Raphael • (62) 93681-828 relatou uma emergência médica/complicação. Clique para abrir a conversa.',
       time: '2h atrás',
-      borderColor: 'border-l-red-300'
+      barClass: 'bg-error/30'
     },
     {
       id: 4,
@@ -49,7 +47,7 @@ const Notifications = () => {
       title: 'Mensagem de Fornecedor',
       message: 'O contato Raphael • (62) 93681-828 possivelmente é um fornecedor oferecendo produtos/serviços. Clique para abrir a conversa.',
       time: '7h atrás',
-      borderColor: 'border-l-blue-300'
+      barClass: 'bg-accent/30'
     },
     {
       id: 5,
@@ -58,7 +56,7 @@ const Notifications = () => {
       title: 'Reclamação/Crítica',
       message: 'Paciente demonstrou insatisfação com o atendimento. Atenção necessária.',
       time: '1 dia atrás',
-      borderColor: 'border-l-orange-300'
+      barClass: 'bg-destructive/30'
     },
     {
       id: 6,
@@ -67,7 +65,7 @@ const Notifications = () => {
       title: 'Solicitação de Reembolso',
       message: 'Paciente está solicitando reembolso do procedimento realizado.',
       time: '2 dias atrás',
-      borderColor: 'border-l-yellow-300'
+      barClass: 'bg-accent/30'
     },
     {
       id: 7,
@@ -76,7 +74,7 @@ const Notifications = () => {
       title: 'Lead VIP',
       message: 'Lead muito importante detectado. Dar atenção especial ao atendimento.',
       time: '3 dias atrás',
-      borderColor: 'border-l-purple-300'
+      barClass: 'bg-primary/30'
     }
   ];
 
@@ -95,8 +93,9 @@ const Notifications = () => {
             return (
               <Card 
                 key={notification.id}
-                className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${notification.borderColor}`}
+                className={`relative cursor-pointer hover:shadow-md transition-shadow`}
               >
+                <div className={`absolute left-0 top-0 h-full w-1 ${notification.barClass}`} aria-hidden="true" />
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <IconComponent className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />

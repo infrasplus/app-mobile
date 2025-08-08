@@ -7,9 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   Bell, 
+  ExternalLink,
   LogOut, 
-  ChevronRight,
-  ArrowLeft
+  ChevronRight
 } from 'lucide-react';
 
 const Settings = () => {
@@ -28,6 +28,13 @@ const Settings = () => {
       description: 'Gerencie quais notificações você deseja receber',
       action: () => navigate('/notification-settings'),
       showArrow: true
+    },
+    {
+      icon: ExternalLink,
+      title: 'Acessar Sistema',
+      description: 'Acesse o sistema completo para editar sua IA, procedimentos, pausar conversas e muito mais.',
+      action: () => {},
+      showArrow: false
     },
     {
       icon: LogOut,

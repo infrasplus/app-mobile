@@ -7,11 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   Bell, 
-  Calendar, 
-  Sparkles, 
+  ExternalLink, 
   ChevronRight, 
-  Clock,
-  Users,
   AlertTriangle,
   X
 } from 'lucide-react';
@@ -32,11 +29,6 @@ const Dashboard = () => {
     }
   ];
 
-  const agendaItems = [
-    { name: 'Dio Brando', time: '1:00 PM - 2:00 PM' },
-    { name: 'Roman Banks', time: '1:00 PM - 2:00 PM' },
-    { name: 'Jesse Kudrow', time: '3:00 PM - 4:00 PM' },
-  ];
 
   const handleNotificationPermission = () => {
     if ('Notification' in window) {
@@ -111,13 +103,14 @@ const Dashboard = () => {
             {notifications.length > 0 ? (
               <div className="space-y-3">
                 {notifications.slice(0, 1).map((notification) => (
-                  <div key={notification.id} className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div key={notification.id} className="relative p-3 border rounded-lg">
+                    <div className="absolute left-0 top-0 h-full w-1 bg-destructive/30" aria-hidden="true" />
                     <div className="flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <AlertTriangle className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-red-900">{notification.title}</h4>
-                        <p className="text-sm text-red-700 mt-1">{notification.message}</p>
-                        <span className="text-xs text-red-600 mt-1 block">{notification.time}</span>
+                        <h4 className="font-medium text-foreground">{notification.title}</h4>
+                        <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
+                        <span className="text-xs text-muted-foreground mt-1 block">{notification.time}</span>
                       </div>
                     </div>
                   </div>
@@ -138,59 +131,20 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Card de Agenda */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Agenda de Hoje
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                10/08 - Segunda
-              </div>
-              
-              {agendaItems.slice(0, 3).map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">{item.time}</p>
-                  </div>
-                </div>
-              ))}
-              
-              <Button 
-                variant="ghost" 
-                className="w-full justify-between"
-                onClick={() => navigate('/agenda')}
-              >
-                <span className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Abrir agenda completa
-                </span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Card Editar IA */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              Editar sua IA
+              <ExternalLink className="h-5 w-5 text-muted-foreground" />
+              Acessar Sistema
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-sm text-muted-foreground mb-4">
-              Personalize as respostas da sua assistente virtual para melhor atender seus pacientes.
+              Acesse o sistema completo para editar sua IA, procedimentos, pausar conversas e muito mais.
             </p>
             <Button variant="outline" className="w-full justify-between">
-              Editar respostas da IA
+              Acessar Sistema
               <ChevronRight className="h-4 w-4" />
             </Button>
           </CardContent>
