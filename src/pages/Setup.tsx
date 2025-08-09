@@ -115,7 +115,7 @@ const Setup: React.FC = () => {
           setCode(newCode);
           // Fixa /setup?code=... na URL — assim o atalho abrirá exatamente aqui
           const newUrl = `${window.location.origin}/setup?code=${encodeURIComponent(newCode)}`;
-          window.history.replaceState({}, '', newUrl);
+          window.location.replace(newUrl);
           try { localStorage.setItem(STORAGE_KEY, newCode); } catch {}
           setStatus('Quase lá! Adicione o app à Tela Inicial.');
         })
