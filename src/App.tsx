@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,7 @@ import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
 import ApiGenerateLink from "./pages/ApiGenerateLink";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
+import Setup from "./pages/Setup";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,9 @@ const App = () => (
         <PwaInstallPrompt />
         <BrowserRouter>
           <Routes>
+            {/* Página pública para preparar instalação e ativar login pós-instalação */}
+            <Route path="/setup" element={<Setup />} />
+
             <Route path="/api/generate-link" element={<ApiGenerateLink />} />
             <Route 
               path="/" 

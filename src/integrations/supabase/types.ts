@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      auth_install_codes: {
+        Row: {
+          code: string
+          created_at: string
+          email: string
+          expires_at: string
+          metadata: Json | null
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          metadata?: Json | null
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          metadata?: Json | null
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string
