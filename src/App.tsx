@@ -11,6 +11,7 @@ import Settings from "./pages/Settings";
 import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
 import ApiGenerateLink from "./pages/ApiGenerateLink";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +23,7 @@ const UnauthScreen = () => (
         Exclua este app e reinstale através do sistema principal no seu navegador.
       </p>
       <Button asChild>
-        <a href="https://web.secretariaplus.com.br">Ir para o sistema</a>
+        <a href="https://web.secretariaplus.com.br" target="_blank" rel="noopener noreferrer">Ir para o sistema</a>
       </Button>
     </main>
   </div>
@@ -39,6 +40,7 @@ const App = () => (
       <AuthProvider>
         <Toaster />
         <Sonner />
+        <PwaInstallPrompt />
         <BrowserRouter>
           <Routes>
             <Route path="/api/generate-link" element={<ApiGenerateLink />} />
