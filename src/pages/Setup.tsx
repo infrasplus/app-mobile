@@ -7,6 +7,19 @@ import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 const FUNCTION_URL = "https://yattgeryizsliduybfxn.supabase.co/functions/v1/generate-link";
 const STORAGE_KEY = "install_code";
+const COOKIE_KEY = "install_code";
+
+function setCookie(name: string, value: string, minutes = 30) {
+  const expires = new Date(Date.now() + minutes * 60_000).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; Expires=${expires}; Path=/; SameSite=Lax`;
+}
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=Lax`;
+}
 
 function isStandalone() {
   const iosStandalone = (window as any).navigator?.standalone === true;
@@ -76,6 +89,7 @@ const Setup: React.FC = () => {
         .then(({ error }) => {
           if (error) throw error;
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
+          try { deleteCookie(COOKIE_KEY); } catch {}
           setStatus('Acesso ativado! Redirecionando...');
           setTimeout(() => navigate('/'), 500);
         })
@@ -113,6 +127,8 @@ const Setup: React.FC = () => {
         })
         .then((newCode) => {
           setCode(newCode);
+          // Persistência extra em cookie (iOS separa localStorage entre Safari e PWA)
+          try { setCookie(COOKIE_KEY, newCode, 30); } catch {}
           // Fixa /setup?code=... na URL — assim o atalho abrirá exatamente aqui
           const newUrl = `${window.location.origin}/setup?code=${encodeURIComponent(newCode)}`;
           window.location.replace(newUrl);
@@ -132,27 +148,29 @@ const Setup: React.FC = () => {
     if (!installed && existingCode) {
       setCode(existingCode);
       try { localStorage.setItem(STORAGE_KEY, existingCode); } catch {}
+      try { setCookie(COOKIE_KEY, existingCode, 30); } catch {}
       setStatus('Quase lá! Adicione o app à Tela Inicial.');
       return;
     }
 
-    // 4) Se está instalado mas não há code: tenta usar o salvo no localStorage como fallback
-    if (installed && !existingCode) {
-      const stored = (() => {
-        try { return localStorage.getItem(STORAGE_KEY) || null; } catch { return null; }
-      })();
-      if (stored && !exchangingRef.current) {
-        exchangingRef.current = true;
-        setStatus('Ativando seu acesso...');
-        const url = new URL(FUNCTION_URL);
-        url.searchParams.set('flow', 'exchange-install');
-        url.searchParams.set('code', stored);
+  // 4) Se está instalado mas não há code: tenta usar cookie primeiro (iOS), depois localStorage
+  if (installed && !existingCode) {
+    const cookieCode = (() => { try { return getCookie(COOKIE_KEY); } catch { return null; } })();
+    const stored = cookieCode || (() => {
+      try { return localStorage.getItem(STORAGE_KEY) || null; } catch { return null; }
+    })();
+    if (stored && !exchangingRef.current) {
+      exchangingRef.current = true;
+      setStatus('Ativando seu acesso...');
+      const url = new URL(FUNCTION_URL);
+      url.searchParams.set('flow', 'exchange-install');
+      url.searchParams.set('code', stored!);
 
-         supabase.functions
-          .invoke('generate-link?' + new URLSearchParams({
-            flow: 'exchange-install',
-            code: stored,
-          }).toString(), { body: {} })
+       supabase.functions
+        .invoke('generate-link?' + new URLSearchParams({
+          flow: 'exchange-install',
+          code: stored!,
+        }).toString(), { body: {} })
           .then(({ data, error }) => {
             if (error || !data?.ok || !(data as any)?.email || !(data as any)?.email_otp) {
               throw new Error((error as any)?.message || (data as any)?.error || 'Falha ao obter OTP');
@@ -166,6 +184,7 @@ const Setup: React.FC = () => {
           .then(({ error }) => {
             if (error) throw error;
             try { localStorage.removeItem(STORAGE_KEY); } catch {}
+            try { deleteCookie(COOKIE_KEY); } catch {}
             setStatus('Acesso ativado! Redirecionando...');
             setTimeout(() => navigate('/'), 500);
           })

@@ -2,7 +2,7 @@
   "name": "SecretáriaPlus",
   "short_name": "SecretáriaPlus",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/setup",
   "scope": "/",
   "display": "standalone",
   "description": "Sistema de IA para atendimento médico",
