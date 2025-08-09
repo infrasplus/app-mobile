@@ -74,6 +74,8 @@ const Dashboard = () => {
                       onClick={handleNotificationPermission}
                       className="bg-accent hover:bg-accent/90 text-primary"
                       size="sm"
+                      disabled={!oneSignalReady}
+                      title={!oneSignalReady ? 'Carregando OneSignal...' : undefined}
                     >
                       Ativar Agora
                     </Button>
