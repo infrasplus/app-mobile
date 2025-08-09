@@ -33,7 +33,7 @@ const Settings = () => {
       icon: ExternalLink,
       title: 'Acessar Sistema',
       description: 'Acesse o sistema completo para editar sua IA, procedimentos, pausar conversas e muito mais.',
-      action: () => {},
+      action: () => { window.location.href = 'https://web.secretariaplus.com.br'; },
       showArrow: false
     },
     {
