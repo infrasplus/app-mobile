@@ -9,13 +9,27 @@ import {
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useOneSignal } from '@/hooks/useOneSignal';
 
 const Dashboard = () => {
   const { showNotificationBanner, dismissNotificationBanner } = useAuth();
   const navigate = useNavigate();
-  const { requestPushPermission } = useOneSignal();
+  const { requestPushPermission, isReady } = useOneSignal();
 
+  const [oneSignalReady, setOneSignalReady] = useState(false);
+  useEffect(() => {
+    let t: any;
+    const poll = () => {
+      if (isReady()) {
+        setOneSignalReady(true);
+      } else {
+        t = setTimeout(poll, 100);
+      }
+    };
+    poll();
+    return () => clearTimeout(t);
+  }, [isReady]);
   const notifications = [
     {
       id: 1,
@@ -119,6 +133,19 @@ const Dashboard = () => {
               Acessar Sistema
               <ChevronRight className="h-4 w-4" />
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Debug OneSignal: botão/link oficial fora do banner */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Debug OneSignal</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground mb-2">
+              Botão oficial do OneSignal para solicitar permissão (fora do banner):
+            </p>
+            <div className="onesignal-customlink-container" />
           </CardContent>
         </Card>
       </div>

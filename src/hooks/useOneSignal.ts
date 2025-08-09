@@ -49,73 +49,71 @@ export function useOneSignal() {
         serviceWorkerPath: 'OneSignalSDKWorker.js',
         serviceWorkerParam: { scope: '/' },
       });
+      initializedRef.current = true;
     });
-
-    initializedRef.current = true;
   }, []);
 
   useEffect(() => {
     init();
   }, [init]);
 
+  const waitUntilReady = useCallback(async (timeoutMs = 8000) => {
+    const start = Date.now();
+    while (!initializedRef.current && Date.now() - start < timeoutMs) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return initializedRef.current;
+  }, []);
+
   const requestPushPermission = useCallback(async () => {
+    // Ensure SDK is initialized BEFORE asking permission (important for iOS user-gesture requirements)
     await init();
+    const ready = await waitUntilReady();
+    if (!ready) throw new Error('OneSignal não ficou pronto a tempo.');
 
     const { data: userRes } = await supabase.auth.getUser();
     const user = userRes?.user;
     if (!user) throw new Error('Usuário não autenticado.');
 
-    return new Promise<string>((resolve, reject) => {
-      try {
-        window.OneSignal.push(async () => {
-          try {
-            // Ask permission via OneSignal API (v16 compatible)
-            const permission: 'granted' | 'denied' | 'default' = await (window.OneSignal?.Notifications?.requestPermission?.() ?? Promise.resolve('default'));
-            if (permission !== 'granted') {
-              return reject(new Error('Permissão de notificação não concedida.'));
-            }
+    // Ask permission directly (no queue) within the click call stack
+    const permission: 'granted' | 'denied' | 'default' = await (window.OneSignal?.Notifications?.requestPermission?.() ?? Promise.resolve('default'));
+    if (permission !== 'granted') {
+      throw new Error('Permissão de notificação não concedida.');
+    }
 
-            // Get OneSignal Player ID across SDK versions
-            let playerId: string | null = null;
-            if (window.OneSignal?.User?.getId) {
-              playerId = await window.OneSignal.User.getId();
-            } else if (window.OneSignal?.getUserId) {
-              playerId = await window.OneSignal.getUserId();
-            }
+    // Get OneSignal Player ID across SDK versions
+    let playerId: string | null = null;
+    if (window.OneSignal?.User?.getId) {
+      playerId = await window.OneSignal.User.getId();
+    } else if (window.OneSignal?.getUserId) {
+      playerId = await window.OneSignal.getUserId();
+    }
 
-            if (!playerId) return reject(new Error('Não foi possível obter o ID do dispositivo.'));
+    if (!playerId) throw new Error('Não foi possível obter o ID do dispositivo.');
 
-            const platform = /Mobile|Android|iP(ad|hone|od)/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
-            const device_os = (navigator as any)?.platform ?? null;
-            const browser = navigator.userAgent;
+    const platform = /Mobile|Android|iP(ad|hone|od)/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+    const device_os = (navigator as any)?.platform ?? null;
+    const browser = navigator.userAgent;
 
-            const { error } = await supabase
-              .from('user_push_subscriptions')
-              .upsert(
-                {
-                  onesignal_player_id: playerId,
-                  user_id: user.id,
-                  platform,
-                  device_os,
-                  browser,
-                  subscribed: true,
-                  last_seen_at: new Date().toISOString(),
-                },
-                { onConflict: 'onesignal_player_id' }
-              );
+    const { error } = await supabase
+      .from('user_push_subscriptions')
+      .upsert(
+        {
+          onesignal_player_id: playerId,
+          user_id: user.id,
+          platform,
+          device_os,
+          browser,
+          subscribed: true,
+          last_seen_at: new Date().toISOString(),
+        },
+        { onConflict: 'onesignal_player_id' }
+      );
 
-            if (error) throw error;
+    if (error) throw error;
 
-            resolve(playerId);
-          } catch (err) {
-            reject(err as Error);
-          }
-        });
-      } catch (err) {
-        reject(err as Error);
-      }
-    });
-  }, [init]);
+    return playerId;
+  }, [init, waitUntilReady]);
 
-  return { requestPushPermission };
+  return { requestPushPermission, isReady: () => initializedRef.current };
 }
