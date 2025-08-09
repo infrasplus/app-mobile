@@ -11,6 +11,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useOneSignal } from '@/hooks/useOneSignal';
+import { OneSignalDebug } from '@/components/OneSignalDebug';
+import { TestNotificationSender } from '@/components/TestNotificationSender';
 
 const Dashboard = () => {
   const { showNotificationBanner, dismissNotificationBanner } = useAuth();
@@ -42,16 +44,24 @@ const Dashboard = () => {
   ];
 
 
-  const handleNotificationPermission = async () => {
-    try {
-      await requestPushPermission();
-    } catch (e) {
-      // Permissão negada ou erro ao registrar o dispositivo
-      console.warn('Falha ao ativar notificações:', e);
-    } finally {
-      dismissNotificationBanner();
+const handleNotificationPermission = async () => {
+  try {
+    console.log('[Dashboard] Iniciando processo de permissão...');
+    const subscriptionId = await requestPushPermission();
+    console.log('[Dashboard] Subscription ID obtido:', subscriptionId);
+    
+    // Mostra feedback visual de sucesso
+    if (subscriptionId) {
+      alert(`Notificações ativadas com sucesso!\nID: ${subscriptionId}`);
     }
-  };
+  } catch (e: any) {
+    // Permissão negada ou erro ao registrar o dispositivo
+    console.error('[Dashboard] Falha ao ativar notificações:', e);
+    alert(`Erro ao ativar notificações: ${e.message || 'Erro desconhecido'}`);
+  } finally {
+    dismissNotificationBanner();
+  }
+};
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -138,18 +148,11 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Debug OneSignal: botão/link oficial fora do banner */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Debug OneSignal</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground mb-2">
-              Botão oficial do OneSignal para solicitar permissão (fora do banner):
-            </p>
-            <div className="onesignal-customlink-container" />
-          </CardContent>
-        </Card>
+{/* Debug OneSignal: botão/link oficial fora do banner */}
+<OneSignalDebug />
+
+{/* Teste de envio de notificação */}
+<TestNotificationSender />
       </div>
 
       <BottomNav />
