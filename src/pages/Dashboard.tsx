@@ -84,10 +84,10 @@ const Dashboard = () => {
 
         {/* Central - texto informativo */}
         <Card>
-          <CardContent className="p-4 space-y-4">
-            <p className="text-sm text-foreground">
+          <CardContent className="p-6 space-y-3">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">
               Esta é sua central de notificações SecretáriaPlus.
-            </p>
+            </h1>
             <p className="text-sm text-muted-foreground">
               Com este app instalado e configurado, você recebe automaticamente avisos da IA sobre as conversas com seus leads/pacientes.
             </p>

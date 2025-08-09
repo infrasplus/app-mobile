@@ -18,62 +18,35 @@ const Notifications = () => {
       type: 'emergency',
       icon: AlertTriangle,
       title: 'Emergência Médica',
-      message: 'URGENTE: Maik • (62) 93434-191 relatou uma emergência médica/complicação. Clique para abrir a conversa.',
-      time: '1h atrás',
-      barClass: 'bg-error/30'
+      message: 'URGENTE: Emergência médica relatada pelo paciente. Clique para abrir a conversa.',
+      time: 'agora',
+      barClass: 'bg-destructive/30'
     },
     {
       id: 2,
       type: 'appointment',
       icon: CalendarCheck,
       title: 'Consulta Agendada',
-      message: 'Nova consulta agendada com sucesso para Maria Silva • (62) 99999-9999.',
+      message: 'Nova consulta agendada com sucesso para o paciente.',
       time: '1h atrás',
       barClass: 'bg-success/30'
     },
     {
       id: 3,
-      type: 'emergency',
-      icon: AlertTriangle,
-      title: 'Emergência Médica',
-      message: 'URGENTE: Raphael • (62) 93681-828 relatou uma emergência médica/complicação. Clique para abrir a conversa.',
-      time: '2h atrás',
-      barClass: 'bg-error/30'
-    },
-    {
-      id: 4,
-      type: 'supplier',
-      icon: Package,
-      title: 'Mensagem de Fornecedor',
-      message: 'O contato Raphael • (62) 93681-828 possivelmente é um fornecedor oferecendo produtos/serviços. Clique para abrir a conversa.',
-      time: '7h atrás',
-      barClass: 'bg-accent/30'
-    },
-    {
-      id: 5,
       type: 'complaint',
       icon: MessageSquare,
       title: 'Reclamação/Crítica',
       message: 'Paciente demonstrou insatisfação com o atendimento. Atenção necessária.',
-      time: '1 dia atrás',
-      barClass: 'bg-destructive/30'
-    },
-    {
-      id: 6,
-      type: 'refund',
-      icon: DollarSign,
-      title: 'Solicitação de Reembolso',
-      message: 'Paciente está solicitando reembolso do procedimento realizado.',
-      time: '2 dias atrás',
+      time: '2h atrás',
       barClass: 'bg-accent/30'
     },
     {
-      id: 7,
+      id: 4,
       type: 'vip',
       icon: UserCheck,
-      title: 'Lead VIP',
-      message: 'Lead muito importante detectado. Dar atenção especial ao atendimento.',
-      time: '3 dias atrás',
+      title: 'Lead de Alta Prioridade',
+      message: 'Lead importante detectado. Dar atenção especial ao atendimento.',
+      time: 'hoje',
       barClass: 'bg-primary/30'
     }
   ];
@@ -86,8 +59,8 @@ const Notifications = () => {
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-6">Historico de Notificações</h1>
         
-        <div className="relative">
-          <div className="space-y-4 opacity-50 pointer-events-none">
+        <div className="relative overflow-hidden">
+          <div className="space-y-4 opacity-40 pointer-events-none select-none overflow-hidden">
             {notifications.map((notification) => {
               const IconComponent = notification.icon;
               
@@ -117,9 +90,10 @@ const Notifications = () => {
               );
             })}
           </div>
-          <div className="absolute inset-0 flex items-center justify-center animate-fade-in">
-            <div className="rounded-full px-4 py-2 bg-background/80 backdrop-blur border border-border text-muted-foreground">
-              em breve
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-background/80 to-background" aria-hidden="true" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="rounded-full px-4 py-2 bg-background/90 backdrop-blur border border-border text-muted-foreground">
+              em breve.
             </div>
           </div>
         </div>
