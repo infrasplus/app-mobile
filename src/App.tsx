@@ -1,7 +1,7 @@
 
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import Dashboard from "./pages/Dashboard";
@@ -30,7 +30,9 @@ const UnauthScreen = () => (
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <UnauthScreen />;
+  const location = useLocation();
+  if (isAuthenticated) return <>{children}</>;
+  return <Navigate to={`/setup${location.search}`} replace />;
 };
 
 const App = () => (

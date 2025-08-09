@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 const FUNCTION_URL = "https://yattgeryizsliduybfxn.supabase.co/functions/v1/generate-link";
+const STORAGE_KEY = "install_code";
 
 function isStandalone() {
   const iosStandalone = (window as any).navigator?.standalone === true;
@@ -59,6 +60,7 @@ const Setup: React.FC = () => {
         })
         .then(({ error }) => {
           if (error) throw error;
+          try { localStorage.removeItem(STORAGE_KEY); } catch {}
           setStatus('Acesso ativado! Redirecionando...');
           setTimeout(() => navigate('/'), 500);
         })
@@ -99,6 +101,7 @@ const Setup: React.FC = () => {
           // Fixa /setup?code=... na URL — assim o atalho abrirá exatamente aqui
           const newUrl = `${window.location.origin}/setup?code=${encodeURIComponent(newCode)}`;
           window.history.replaceState({}, '', newUrl);
+          try { localStorage.setItem(STORAGE_KEY, newCode); } catch {}
           setStatus('Quase lá! Adicione o app à Tela Inicial.');
         })
         .catch((e: any) => {
@@ -113,12 +116,50 @@ const Setup: React.FC = () => {
     // 3) Se não está instalado e já existe code na URL, apenas instrui o usuário a instalar
     if (!installed && existingCode) {
       setCode(existingCode);
+      try { localStorage.setItem(STORAGE_KEY, existingCode); } catch {}
       setStatus('Quase lá! Adicione o app à Tela Inicial.');
       return;
     }
 
-    // 4) Se está instalado mas não há code (cenário raro), sugerimos refazer o processo
+    // 4) Se está instalado mas não há code: tenta usar o salvo no localStorage como fallback
     if (installed && !existingCode) {
+      const stored = (() => {
+        try { return localStorage.getItem(STORAGE_KEY) || null; } catch { return null; }
+      })();
+      if (stored && !exchangingRef.current) {
+        exchangingRef.current = true;
+        setStatus('Ativando seu acesso...');
+        const url = new URL(FUNCTION_URL);
+        url.searchParams.set('flow', 'exchange-install');
+        url.searchParams.set('code', stored);
+
+        fetch(url.toString())
+          .then(async (res) => {
+            const json = await res.json();
+            if (!res.ok || !json?.ok || !json?.email || !json?.email_otp) {
+              throw new Error(json?.error || 'Falha ao obter OTP');
+            }
+            return supabase.auth.verifyOtp({
+              email: json.email as string,
+              token: json.email_otp as string,
+              type: 'email',
+            });
+          })
+          .then(({ error }) => {
+            if (error) throw error;
+            try { localStorage.removeItem(STORAGE_KEY); } catch {}
+            setStatus('Acesso ativado! Redirecionando...');
+            setTimeout(() => navigate('/'), 500);
+          })
+          .catch((e: any) => {
+            console.error('exchange-install (stored) error', e);
+            setError(e?.message || 'Não foi possível ativar seu acesso.');
+            setStatus('');
+          });
+
+        return;
+      }
+
       setStatus('');
       setError('Instalado, mas sem código de ativação. Abra novamente o link de configuração para concluir.');
       return;
