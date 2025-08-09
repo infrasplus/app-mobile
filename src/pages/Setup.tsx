@@ -26,8 +26,21 @@ const Setup: React.FC = () => {
   const [code, setCode] = useState<string | null>(null);
   const exchangingRef = useRef(false);
 
-  const installed = useMemo(() => isStandalone(), []);
+  const [installed, setInstalled] = useState<boolean>(isStandalone());
   const ios = isIOS();
+
+  // Mantém o estado de instalação atualizado (iOS/Android)
+  useEffect(() => {
+    const mq = window.matchMedia?.('(display-mode: standalone)');
+    const update = () => setInstalled(isStandalone());
+    update();
+    mq?.addEventListener?.('change', update);
+    window.addEventListener('focus', update);
+    return () => {
+      mq?.removeEventListener?.('change', update);
+      window.removeEventListener('focus', update);
+    };
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -45,16 +58,18 @@ const Setup: React.FC = () => {
       url.searchParams.set('flow', 'exchange-install');
       url.searchParams.set('code', existingCode);
 
-      fetch(url.toString())
-        .then(async (res) => {
-          const json = await res.json();
-          if (!res.ok || !json?.ok || !json?.email || !json?.email_otp) {
-            throw new Error(json?.error || 'Falha ao obter OTP');
+       supabase.functions
+        .invoke('generate-link?' + new URLSearchParams({
+          flow: 'exchange-install',
+          code: existingCode,
+        }).toString(), { body: {} })
+        .then(({ data, error }) => {
+          if (error || !data?.ok || !(data as any)?.email || !(data as any)?.email_otp) {
+            throw new Error((error as any)?.message || (data as any)?.error || 'Falha ao obter OTP');
           }
-          // Realiza o login local sem sair do PWA
           return supabase.auth.verifyOtp({
-            email: json.email as string,
-            token: json.email_otp as string,
+            email: (data as any).email as string,
+            token: (data as any).email_otp as string,
             type: 'email',
           });
         })
@@ -90,11 +105,11 @@ const Setup: React.FC = () => {
       // Garantir um redirect_to coerente (usado internamente caso necessário)
       url.searchParams.set('redirect_to', `${window.location.origin}/`);
 
-      fetch(url.toString())
-        .then(async (res) => {
-          const json = await res.json();
-          if (!res.ok || !json?.ok || !json?.code) throw new Error(json?.error || 'Falha ao gerar code');
-          return json.code as string;
+       supabase.functions
+        .invoke('generate-link?' + url.searchParams.toString(), { body: {} })
+        .then(({ data, error }) => {
+          if (error || !data?.ok || !(data as any)?.code) throw new Error((error as any)?.message || (data as any)?.error || 'Falha ao gerar code');
+          return (data as any).code as string;
         })
         .then((newCode) => {
           setCode(newCode);
@@ -133,15 +148,18 @@ const Setup: React.FC = () => {
         url.searchParams.set('flow', 'exchange-install');
         url.searchParams.set('code', stored);
 
-        fetch(url.toString())
-          .then(async (res) => {
-            const json = await res.json();
-            if (!res.ok || !json?.ok || !json?.email || !json?.email_otp) {
-              throw new Error(json?.error || 'Falha ao obter OTP');
+         supabase.functions
+          .invoke('generate-link?' + new URLSearchParams({
+            flow: 'exchange-install',
+            code: stored,
+          }).toString(), { body: {} })
+          .then(({ data, error }) => {
+            if (error || !data?.ok || !(data as any)?.email || !(data as any)?.email_otp) {
+              throw new Error((error as any)?.message || (data as any)?.error || 'Falha ao obter OTP');
             }
             return supabase.auth.verifyOtp({
-              email: json.email as string,
-              token: json.email_otp as string,
+              email: (data as any).email as string,
+              token: (data as any).email_otp as string,
               type: 'email',
             });
           })
