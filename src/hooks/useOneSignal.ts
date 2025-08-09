@@ -54,7 +54,8 @@ const init = useCallback(async () => {
         appId,
         allowLocalhostAsSecureOrigin: true,
         // Keep explicit paths for clarity.
-        serviceWorkerPath: 'OneSignalSDKWorker.js',
+        // Usa nosso SW raiz já registrado pelo app
+        serviceWorkerPath: '/sw.js',
         serviceWorkerParam: { scope: '/' },
       });
 
@@ -106,10 +107,12 @@ const requestPushPermission = useCallback(async () => {
   if (permission !== 'granted') {
     throw new Error('Permissão de notificação não concedida.');
   }
+  console.log('[OneSignal] permission:', permission);
 
   // Ensure user is subscribed
   try {
     const isSubscribed = await (window.OneSignal?.Notifications?.isSubscribed?.() ?? Promise.resolve(false));
+    console.log('[OneSignal] isSubscribed before:', isSubscribed);
     if (!isSubscribed) {
       await window.OneSignal?.Notifications?.subscribe?.();
     }
@@ -143,11 +146,13 @@ const requestPushPermission = useCallback(async () => {
     }
   }
 
+  console.log('[OneSignal] playerId:', playerId);
   if (!playerId) throw new Error('Não foi possível obter o ID do dispositivo.');
 
   const platform = /Mobile|Android|iP(ad|hone|od)/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
   const device_os = (navigator as any)?.platform ?? null;
   const browser = navigator.userAgent;
+  console.log('[OneSignal] upserting on user_push_subscriptions...');
 
   const { error } = await supabase
     .from('user_push_subscriptions')
