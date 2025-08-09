@@ -44,6 +44,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_push_subscriptions: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_os: string | null
+          id: string
+          last_seen_at: string | null
+          onesignal_player_id: string
+          platform: string | null
+          subscribed: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_os?: string | null
+          id?: string
+          last_seen_at?: string | null
+          onesignal_player_id: string
+          platform?: string | null
+          subscribed?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_os?: string | null
+          id?: string
+          last_seen_at?: string | null
+          onesignal_player_id?: string
+          platform?: string | null
+          subscribed?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string
