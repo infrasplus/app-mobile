@@ -24,7 +24,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
-  const clinicName = 'Clínica Exemplo';
+  const [clinicName, setClinicName] = useState<string>('');
   const whatsappConnected = Math.random() > 0.5; // Simula conexão aleatória
 
   useEffect(() => {
@@ -37,10 +37,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // IMPORTANT: Set listener first, then get initial session
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
+      const user = session?.user as any;
+      if (user) {
+        const raw = user.user_metadata?.name || user.user_metadata?.full_name || user.email || 'Usuário';
+        const formatted = String(raw).replace(/[._-]/g, ' ').trim();
+        setClinicName(formatted);
+      } else {
+        setClinicName('');
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
+      const user = session?.user as any;
+      if (user) {
+        const raw = user.user_metadata?.name || user.user_metadata?.full_name || user.email || 'Usuário';
+        const formatted = String(raw).replace(/[._-]/g, ' ').trim();
+        setClinicName(formatted);
+      }
     });
 
     return () => {

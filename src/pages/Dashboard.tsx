@@ -112,7 +112,7 @@ const Dashboard = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Acesse o sistema completo para editar sua IA, procedimentos, pausar conversas e muito mais.
             </p>
-            <Button variant="outline" className="w-full justify-between" onClick={() => (window.location.href = 'https://web.secretariaplus.com.br')}>
+            <Button variant="outline" className="w-full justify-between" onClick={() => window.open('https://web.secretariaplus.com.br', '_blank', 'noopener,noreferrer')}>
               Acessar Sistema
               <ChevronRight className="h-4 w-4" />
             </Button>
