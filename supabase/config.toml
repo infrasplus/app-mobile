@@ -1,1 +1,4 @@
 project_id = "yattgeryizsliduybfxn"
+
+[functions.generate-link]
+verify_jwt = false

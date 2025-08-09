@@ -4,24 +4,32 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import Login from "./pages/Login";
+import { Button } from "@/components/ui/button";
 import Dashboard from "./pages/Dashboard";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import NotificationSettings from "./pages/NotificationSettings";
-
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const UnauthScreen = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center p-6">
+    <main className="max-w-md text-center space-y-4">
+      <h1 className="text-2xl font-semibold">Acesso indisponível</h1>
+      <p className="text-muted-foreground">
+        Exclua este app e reinstale através do sistema principal no seu navegador.
+      </p>
+      <Button asChild>
+        <a href="https://web.secretariaplus.com.br">Ir para o sistema</a>
+      </Button>
+    </main>
+  </div>
+);
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
-};
-
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
-  return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
+  return isAuthenticated ? <>{children}</> : <UnauthScreen />;
 };
 
 const App = () => (
@@ -35,9 +43,9 @@ const App = () => (
             <Route 
               path="/" 
               element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
               } 
             />
             <Route 

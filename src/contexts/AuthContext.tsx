@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -23,35 +24,39 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
-  const clinicName = "Clínica Exemplo";
+  const clinicName = 'Clínica Exemplo';
   const whatsappConnected = Math.random() > 0.5; // Simula conexão aleatória
 
   useEffect(() => {
-    const savedAuth = localStorage.getItem('secretaria-plus-auth');
+    // Banner persisted setting
     const savedBanner = localStorage.getItem('secretaria-plus-banner');
-    
-    if (savedAuth === 'true') {
-      setIsAuthenticated(true);
-    }
-    
     if (savedBanner === 'dismissed') {
       setShowNotificationBanner(false);
     }
+
+    // IMPORTANT: Set listener first, then get initial session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const login = (email: string, password: string) => {
-    // Dados fake para teste
-    if (email === 'admin@clinica.com' && password === '123456') {
-      setIsAuthenticated(true);
-      localStorage.setItem('secretaria-plus-auth', 'true');
-      return true;
-    }
+  // Legacy no-op login to keep type compatibility (not used anymore)
+  const login = (_email: string, _password: string) => {
+    console.warn('Login via tela foi desativado. Use o magic link.');
     return false;
   };
 
   const logout = () => {
+    supabase.auth.signOut();
     setIsAuthenticated(false);
-    localStorage.removeItem('secretaria-plus-auth');
   };
 
   const dismissNotificationBanner = () => {
