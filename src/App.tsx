@@ -1,7 +1,5 @@
 
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -12,7 +10,6 @@ import Settings from "./pages/Settings";
 import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
 import ApiGenerateLink from "./pages/ApiGenerateLink";
-import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import Setup from "./pages/Setup";
 
 const queryClient = new QueryClient();
@@ -38,12 +35,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <PwaInstallPrompt />
-        <BrowserRouter>
+    <AuthProvider>
+      <Sonner />
+      <BrowserRouter>
           <Routes>
             {/* Página pública para preparar instalação e ativar login pós-instalação */}
             <Route path="/setup" element={<Setup />} />
@@ -93,8 +87,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+    </QueryClientProvider>
 );
 
 export default App;
