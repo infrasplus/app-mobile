@@ -9,10 +9,12 @@ import {
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useOneSignal } from '@/hooks/useOneSignal';
 
 const Dashboard = () => {
   const { showNotificationBanner, dismissNotificationBanner } = useAuth();
   const navigate = useNavigate();
+  const { requestPushPermission } = useOneSignal();
 
   const notifications = [
     {
@@ -26,12 +28,13 @@ const Dashboard = () => {
   ];
 
 
-  const handleNotificationPermission = () => {
-    if ('Notification' in window) {
-      Notification.requestPermission().then(() => {
-        dismissNotificationBanner();
-      });
-    } else {
+  const handleNotificationPermission = async () => {
+    try {
+      await requestPushPermission();
+    } catch (e) {
+      // Permissão negada ou erro ao registrar o dispositivo
+      console.warn('Falha ao ativar notificações:', e);
+    } finally {
       dismissNotificationBanner();
     }
   };
