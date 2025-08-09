@@ -43,21 +43,19 @@ const ApiGenerateLink: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <main className="max-w-lg text-center space-y-4">
-        <header>
-          <h1 className="text-2xl font-semibold">Gerar Magic Link</h1>
-        </header>
-        {!error ? (
-          <p className="text-muted-foreground">Redirecionando com segurança...</p>
-        ) : (
-          <article className="space-y-2">
-            <p className="text-destructive">{error}</p>
-            <p className="text-muted-foreground">
-              Exemplo: /api/generate-link?email=seuemail@exemplo.com&name=Seu+Nome&wh_id=1804&inst=sua_inst
-            </p>
-          </article>
-        )}
-      </main>
+      {!error ? (
+        <div className="flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/30 border-t-primary animate-spin" aria-label="Carregando" />
+          <span className="sr-only">Carregando…</span>
+        </div>
+      ) : (
+        <main className="max-w-lg text-center space-y-2">
+          <p className="text-destructive">{error}</p>
+          <p className="text-muted-foreground">
+            Exemplo: /api/generate-link?email=seuemail@exemplo.com&name=Seu+Nome&wh_id=1804&inst=sua_inst
+          </p>
+        </main>
+      )}
     </div>
   );
 };

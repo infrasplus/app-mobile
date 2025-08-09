@@ -84,38 +84,46 @@ const Notifications = () => {
       <Header />
       
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-6">Notificações</h1>
+        <h1 className="text-2xl font-bold mb-6">Historico de Notificações</h1>
         
-        <div className="space-y-4">
-          {notifications.map((notification) => {
-            const IconComponent = notification.icon;
-            
-            return (
-              <Card 
-                key={notification.id}
-                className={`relative cursor-pointer hover:shadow-md transition-shadow`}
-              >
-                <div className={`absolute left-0 top-0 h-full w-1 ${notification.barClass}`} aria-hidden="true" />
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <IconComponent className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground mb-1">
-                        {notification.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {notification.message}
-                      </p>
-                      <span className="text-xs text-muted-foreground">
-                        {notification.time}
-                      </span>
+        <div className="relative">
+          <div className="space-y-4 opacity-50 pointer-events-none">
+            {notifications.map((notification) => {
+              const IconComponent = notification.icon;
+              
+              return (
+                <Card 
+                  key={notification.id}
+                  className={`relative cursor-pointer hover:shadow-md transition-shadow`}
+                >
+                  <div className={`absolute left-0 top-0 h-full w-1 ${notification.barClass}`} aria-hidden="true" />
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <IconComponent className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-foreground mb-1">
+                          {notification.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {notification.message}
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                          {notification.time}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center animate-fade-in">
+            <div className="rounded-full px-4 py-2 bg-background/80 backdrop-blur border border-border text-muted-foreground">
+              em breve
+            </div>
+          </div>
         </div>
+
         
         {notifications.length === 0 && (
           <div className="text-center py-12">
