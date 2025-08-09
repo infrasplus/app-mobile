@@ -70,7 +70,7 @@ const Setup: React.FC = () => {
           return supabase.auth.verifyOtp({
             email: (data as any).email as string,
             token: (data as any).email_otp as string,
-            type: 'email',
+            type: 'magiclink',
           });
         })
         .then(({ error }) => {
@@ -160,7 +160,7 @@ const Setup: React.FC = () => {
             return supabase.auth.verifyOtp({
               email: (data as any).email as string,
               token: (data as any).email_otp as string,
-              type: 'email',
+              type: 'magiclink',
             });
           })
           .then(({ error }) => {
