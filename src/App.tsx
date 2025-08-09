@@ -10,6 +10,7 @@ import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
+import ApiGenerateLink from "./pages/ApiGenerateLink";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/api/generate-link" element={<ApiGenerateLink />} />
             <Route 
               path="/" 
               element={

@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
       },
     });
 
-    if (linkError || !linkData?.user || !linkData?.action_link) {
+    const actionLink = linkData?.properties?.action_link as string | undefined;
+    if (linkError || !linkData?.user || !actionLink) {
       console.error('generateLink error', linkError);
       return new Response(JSON.stringify({ error: linkError?.message || 'Falha ao gerar magic link' }), {
         status: 500,
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
           ok: true,
           email,
           user_id: user.id,
-          action_link: linkData.action_link,
+          action_link: actionLink,
           created: !!user?.created_at,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
     // Default: redirect straight to the magic link so the user just pastes and goes
     return new Response(null, {
       status: 302,
-      headers: { Location: linkData.action_link, ...corsHeaders },
+      headers: { Location: actionLink, ...corsHeaders },
     });
   } catch (e) {
     console.error('Unhandled error', e);
