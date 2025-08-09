@@ -85,14 +85,14 @@ const Dashboard = () => {
         {/* Central - texto informativo */}
         <Card>
           <CardContent className="p-6 space-y-3">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+            <h1 className="text-lg font-semibold text-foreground">
               Esta é sua central de notificações SecretáriaPlus.
             </h1>
             <p className="text-sm text-muted-foreground">
-              Com este app instalado e configurado, você recebe automaticamente avisos da IA sobre as conversas com seus leads/pacientes.
+              Com este app instalado, você recebe avisos da IA sobre as conversas automaticamente.
             </p>
             <p className="text-sm text-muted-foreground">
-              Basta aceitar as notificações e pronto! quando a IA detectar que precisa da sua atenção, você será notificado.
+              Basta aceitar as notificações: quando a IA detectar que precisa da sua atenção, você será notificado pelo celular.
             </p>
             <p className="text-sm">
               💡 Dica: Clique na notificação para abrir a conversa diretamente no WhatsApp
