@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { AlertCircle } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 function isStandalone() {
-  // iOS Safari
   const iosStandalone = (window as any).navigator?.standalone === true
-  // All platforms supporting display-mode
   const mqStandalone = window.matchMedia?.('(display-mode: standalone)')?.matches
   return iosStandalone || mqStandalone
 }
@@ -16,93 +16,73 @@ function isIOS() {
 
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any | null>(null)
-  const [visible, setVisible] = useState(false)
-  const dismissedRef = useRef<boolean>(false)
+  const [installed, setInstalled] = useState<boolean>(false)
+  const isMobile = useIsMobile()
 
   const alreadyInstalled = useMemo(() => isStandalone(), [])
 
   useEffect(() => {
-    const dismissed = localStorage.getItem('pwa-prompt-dismissed') === '1'
-    dismissedRef.current = dismissed
-    if (!alreadyInstalled && !dismissed) {
-      // Android/Chrome
-      const onBIP = (e: any) => {
-        e.preventDefault()
-        setDeferredPrompt(e)
-        setVisible(true)
-      }
-      window.addEventListener('beforeinstallprompt', onBIP)
+    setInstalled(alreadyInstalled)
 
-      // iOS (no event)
-      if (isIOS()) {
-        // show gentle prompt after a short delay
-        const t = setTimeout(() => setVisible(true), 1200)
-        return () => {
-          window.removeEventListener('beforeinstallprompt', onBIP)
-          clearTimeout(t)
-        }
-      }
-      return () => window.removeEventListener('beforeinstallprompt', onBIP)
+    const onBIP = (e: any) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', onBIP)
+
+    const onInstalled = () => setInstalled(true)
+    window.addEventListener('appinstalled', onInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBIP)
+      window.removeEventListener('appinstalled', onInstalled)
     }
   }, [alreadyInstalled])
 
-  useEffect(() => {
-    const onInstalled = () => setVisible(false)
-    window.addEventListener('appinstalled', onInstalled)
-    return () => window.removeEventListener('appinstalled', onInstalled)
-  }, [])
-
-  if (alreadyInstalled || !visible) return null
-
-  const onDismiss = () => {
-    localStorage.setItem('pwa-prompt-dismissed', '1')
-    setVisible(false)
-  }
-
-  const onInstallClick = async () => {
-    if (!deferredPrompt) {
-      onDismiss()
-      return
-    }
+  const handleInstall = async () => {
+    if (!deferredPrompt) return
     try {
       deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      if (outcome !== 'accepted') {
-        // keep it subtle – if declined, don't show again
-        localStorage.setItem('pwa-prompt-dismissed', '1')
-      }
+      await deferredPrompt.userChoice
     } catch {}
-    setVisible(false)
   }
 
-  const isIos = isIOS()
+  const showGate = isMobile && !installed
+  const ios = isIOS()
+
+  if (!showGate) return null
 
   return (
-    <div className="fixed inset-x-0 bottom-2 z-50 px-4">
-      <div className="mx-auto max-w-md rounded-xl border bg-card text-card-foreground shadow-lg">
-        <div className="p-4">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur-sm">
+      <div className="mx-4 max-w-md w-full rounded-xl border bg-card text-card-foreground shadow-lg">
+        <div className="p-5">
           <div className="flex items-start gap-3">
+            <div className="shrink-0 mt-0.5 text-destructive">
+              <AlertCircle className="h-5 w-5" aria-hidden="true" />
+            </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium">Instale o app Secretária Plus</h3>
-              {isIos ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  No iPhone, toque em Compartilhar e escolha "Adicionar à Tela de Início" para ter acesso rápido ao app.
-                </p>
+              <h3 className="text-base font-semibold">Instale o SecretáriaPlus para continuar</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Para receber notificações push e usar todos os recursos, adicione o app à Tela inicial. Sem instalar, o uso permanecerá bloqueado.
+              </p>
+              {ios ? (
+                <ol className="mt-3 list-decimal pl-5 text-sm text-muted-foreground space-y-1">
+                  <li>Toque em Compartilhar no Safari.</li>
+                  <li>Escolha "Adicionar à Tela de Início".</li>
+                  <li>Abra o app pelo atalho criado.</li>
+                </ol>
               ) : (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Adicione o atalho à tela inicial para uma experiência mais rápida e completa.
-                </p>
+                <div className="mt-3 space-y-2">
+                  {deferredPrompt ? (
+                    <Button size="sm" onClick={handleInstall}>Instalar agora</Button>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No Chrome, abra o menu ⋮ e toque em "Adicionar à tela inicial". Depois, abra pelo atalho.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
-          </div>
-          <div className="mt-3 flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={onDismiss}>Agora não</Button>
-            {!isIos && (
-              <Button size="sm" onClick={onInstallClick}>Instalar</Button>
-            )}
-            {isIos && (
-              <Button size="sm" onClick={onDismiss}>Ok, entendi</Button>
-            )}
           </div>
         </div>
       </div>
