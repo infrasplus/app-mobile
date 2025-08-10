@@ -18,14 +18,9 @@ const Dashboard = () => {
   const { showNotificationBanner, dismissNotificationBanner } = useAuth();
   const navigate = useNavigate();
   const { enablePush, isReady } = useOneSignal();
-  const IS_UI_PREVIEW = typeof window !== 'undefined' && (
-    window.location.pathname.startsWith('/ui-preview') ||
-    new URLSearchParams(window.location.search).has('uiPreview')
-  );
 
-  const [oneSignalReady, setOneSignalReady] = useState(IS_UI_PREVIEW ? true : false);
+  const [oneSignalReady, setOneSignalReady] = useState(false);
   useEffect(() => {
-    if (IS_UI_PREVIEW) return;
     let t: any;
     const poll = () => {
       if (isReady()) {
@@ -153,15 +148,11 @@ const handleNotificationPermission = async () => {
           </CardContent>
         </Card>
 
-{/* Debug Only (desativado no UI Preview) */}
-{!IS_UI_PREVIEW && (
-  <>
-    {/* Debug OneSignal: botão/link oficial fora do banner */}
-    <OneSignalDebug />
-    {/* Teste de envio de notificação */}
-    <TestNotificationSender />
-  </>
-)}
+{/* Debug OneSignal: botão/link oficial fora do banner */}
+<OneSignalDebug />
+
+{/* Teste de envio de notificação */}
+<TestNotificationSender />
       </div>
 
       <BottomNav />

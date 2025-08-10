@@ -11,12 +11,6 @@ declare global {
 // AppId do OneSignal (o seu está correto)
 const ONESIGNAL_APP_ID = 'd8e46df0-d54d-459f-b79d-6e0a36bffdb8';
 
-// UI Preview Mode: desativa OneSignal e retorna mocks no Lovable
-const IS_UI_PREVIEW = typeof window !== 'undefined' && (
-  window.location.pathname.startsWith('/ui-preview') ||
-  new URLSearchParams(window.location.search).has('uiPreview')
-);
-
 export function useOneSignal(externalUserId?: string) {
   const initializedRef = useRef(false);
   const readyPromiseRef = useRef<Promise<void> | null>(null);
@@ -79,7 +73,6 @@ export function useOneSignal(externalUserId?: string) {
 
   /** Inicializa o OneSignal v16, faz login do usuário e configura listeners (uma vez) */
   const init = useCallback(async () => {
-    if (IS_UI_PREVIEW) return;
     if (initializedRef.current) return;
     await loadSdk();
 
@@ -147,9 +140,6 @@ export function useOneSignal(externalUserId?: string) {
 
   /** Pede permissão e conclui a inscrição (opt-in). Retorna o subscriptionId. */
   const enablePush = useCallback(async () => {
-    if (IS_UI_PREVIEW) {
-      return 'preview-subscription-id';
-    }
     await ensureReady();
     const OS = window.OneSignal;
     if (!OS) throw new Error('OneSignal SDK não carregado');
@@ -192,12 +182,14 @@ export function useOneSignal(externalUserId?: string) {
 
   // dispara init automaticamente ao usar o hook
   useEffect(() => {
-    if (!IS_UI_PREVIEW) init();
+    init();
   }, [init]);
 
   return {
+    /** chame no clique do botão "Ativar notificações" */
     enablePush,
-    isReady: () => (IS_UI_PREVIEW ? true : initializedRef.current),
-    getSubscriptionId: () => (IS_UI_PREVIEW ? 'preview-subscription-id' : subscriptionIdRef.current),
+    /** utilitários */
+    isReady: () => initializedRef.current,
+    getSubscriptionId: () => subscriptionIdRef.current,
   };
 }
