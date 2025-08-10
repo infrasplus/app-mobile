@@ -272,7 +272,7 @@ useEffect(() => {
             <div className="flex items-center gap-2">
               {checking ? (
                 <>
-                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-accent" />
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-accent pulse" />
                   <span className="text-sm font-medium">Verificando...</span>
                 </>
               ) : (
