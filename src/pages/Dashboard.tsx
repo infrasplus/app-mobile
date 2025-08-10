@@ -26,7 +26,8 @@ const Dashboard = () => {
   // Dialog para reativação quando o sistema bloqueia notificações
   const [reauthDialogOpen, setReauthDialogOpen] = useState(false);
   const [verifying, setVerifying] = useState(false);
-
+  const [activating, setActivating] = useState(false);
+  const [checking, setChecking] = useState(false);
   // Detecção básica de plataforma
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const isIOS = /iPad|iPhone|iPod/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
@@ -149,30 +150,37 @@ const Dashboard = () => {
 
 
 const handleNotificationPermission = async () => {
+  // Esconde o banner e mostra status "Verificando..." imediatamente
+  setActivating(true);
+  setChecking(true);
   try {
-    // Tente habilitar primeiro para evitar diálogos desnecessários
     const subscriptionId = await enablePush().catch(() => null);
-
     const enabled = await waitForEnabled();
+
     if (enabled && subscriptionId) {
       setIsPushEnabled(true);
       dismissNotificationBanner();
+      setChecking(false);
+      setActivating(false);
+      // Refresh suave para garantir que o estado reflita imediatamente
+      setTimeout(() => navigate(0), 300);
       return;
     }
 
     const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
-
-    // Abre o diálogo apenas se estiver realmente bloqueado
     if (perm === 'denied' || (isIOS && perm === 'granted' && !enabled)) {
       setReauthDialogOpen(true);
     }
-    // Caso contrário, mantemos o banner e o usuário pode tentar novamente
   } catch (e) {
     console.error('[Dashboard] Falha ao ativar notificações:', e);
     const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
     if (perm === 'denied') {
       setReauthDialogOpen(true);
     }
+  } finally {
+    // Se não habilitou, volta a exibir o banner e sai do modo de verificação
+    setChecking(false);
+    if (!isPushEnabled) setActivating(false);
   }
 };
 
@@ -193,7 +201,13 @@ const verifyAfterSettings = async () => {
     setVerifying(false);
   }
 };
-
+useEffect(() => {
+  if (!checking) return;
+  const t = setTimeout(() => {
+    try { navigate(0); } catch {}
+  }, 12000);
+  return () => clearTimeout(t);
+}, [checking, navigate]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -201,7 +215,7 @@ const verifyAfterSettings = async () => {
       
       <div className="p-4 space-y-4">
         {/* Banner de Notificações */}
-        {!isPushEnabled && (
+        {!isPushEnabled && !activating && (
           <Card className="bg-accent/10 border-accent">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
@@ -231,10 +245,19 @@ const verifyAfterSettings = async () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <span className={`inline-block w-2.5 h-2.5 rounded-full ${isPushEnabled ? 'bg-success' : 'bg-destructive'}`} />
-              <span className="text-sm font-medium">
-                {isPushEnabled ? 'Notificações Ligadas' : 'Notificações Desligadas'}
-              </span>
+              {checking ? (
+                <>
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-accent" />
+                  <span className="text-sm font-medium">Verificando...</span>
+                </>
+              ) : (
+                <>
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${isPushEnabled ? 'bg-success' : 'bg-destructive'}`} />
+                  <span className="text-sm font-medium">
+                    {isPushEnabled ? 'Notificações Ligadas' : 'Notificações Desligadas'}
+                  </span>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
