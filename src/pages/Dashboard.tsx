@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { 
   ExternalLink, 
   ChevronRight 
@@ -20,6 +21,27 @@ const Dashboard = () => {
 
   const [oneSignalReady, setOneSignalReady] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState<boolean>(typeof Notification !== 'undefined' ? Notification.permission === 'granted' : false);
+
+  // Dialog para reativação quando o sistema bloqueia notificações
+  const [reauthDialogOpen, setReauthDialogOpen] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  // Detecção básica de plataforma
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+
+  const computeEnabled = async () => {
+    try {
+      const OS = (window as any).OneSignal;
+      const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+      const opted = !!OS?.User?.PushSubscription?.optedIn;
+      const id = OS?.User?.PushSubscription?.id || (await OS?.User?.PushSubscription?.getIdAsync?.());
+      return Boolean(granted && opted && id);
+    } catch {
+      return false;
+    }
+  };
   useEffect(() => {
     let t: any;
     const poll = () => {
@@ -114,17 +136,47 @@ const Dashboard = () => {
 
 const handleNotificationPermission = async () => {
   try {
-    console.log('[Dashboard] Iniciando processo de permissão...');
+    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+    const OS = (window as any).OneSignal;
+
+    // Se o navegador marcou como "negado", ou no iOS o sistema bloqueou, abrimos instruções
+    if (perm === 'denied' || (isIOS && perm === 'granted' && !isPushEnabled)) {
+      setReauthDialogOpen(true);
+      return;
+    }
+
     const subscriptionId = await enablePush();
-    console.log('[Dashboard] Subscription ID obtido:', subscriptionId);
-    if (subscriptionId) {
+    const enabled = await computeEnabled();
+
+    if (enabled && subscriptionId) {
       setIsPushEnabled(true);
       dismissNotificationBanner();
+      return;
     }
-    // Removido: popups nativos (alert) com Subscription ID
+
+    // Se ainda não habilitou (ex.: bloqueio no sistema), abrir instruções
+    setReauthDialogOpen(true);
   } catch (e: any) {
     console.error('[Dashboard] Falha ao ativar notificações:', e);
-    // Removido: alert de erro em produção
+    setReauthDialogOpen(true);
+  }
+};
+
+const verifyAfterSettings = async () => {
+  setVerifying(true);
+  try {
+    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+    if (perm !== 'denied') {
+      try { await enablePush(); } catch {}
+    }
+    const enabled = await computeEnabled();
+    setIsPushEnabled(enabled);
+    if (enabled) {
+      dismissNotificationBanner();
+      setReauthDialogOpen(false);
+    }
+  } finally {
+    setVerifying(false);
   }
 };
 
@@ -210,6 +262,40 @@ const handleNotificationPermission = async () => {
         </Card>
 
       </div>
+
+      {/* Diálogo de reativação de notificações */}
+      <Dialog open={reauthDialogOpen} onOpenChange={setReauthDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ativar notificações no sistema</DialogTitle>
+            <DialogDescription>
+              Detectamos que as notificações estão bloqueadas pelo sistema. Siga os passos abaixo e depois toque em "Verificar".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            {isIOS ? (
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Abra Ajustes do iPhone</li>
+                <li>Notificações {'>'} encontre “SecretáriaPlus”</li>
+                <li>Ative “Permitir Notificações”</li>
+                <li>Se usar Safari: Ajustes {'>'} Safari {'>'} Notificações {'>'} Permitir</li>
+              </ul>
+            ) : (
+              <ul className="list-disc pl-5 space-y-1">
+                <li>No navegador, toque no ícone de cadeado na barra de endereço</li>
+                <li>Permissões {'>'} Notificações {'>'} Permitir</li>
+                <li>Se for app instalado (Android): Configurações {'>'} Apps {'>'} SecretáriaPlus {'>'} Notificações</li>
+              </ul>
+            )}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setReauthDialogOpen(false)}>Fechar</Button>
+            <Button onClick={verifyAfterSettings} disabled={verifying}>
+              {verifying ? 'Verificando...' : 'Já ativei, verificar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
