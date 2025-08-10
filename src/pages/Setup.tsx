@@ -9,6 +9,7 @@ import { persistAuthBackup } from '@/lib/auth-persist';
 import appleShareIcon from '@/assets/apple-share-icon.png';
 import iphoneTutorial from '@/assets/iphone-tutorial.webp';
 import logoBase from '@/assets/logo-base.png';
+import loaderWebp from '@/assets/loader.webp';
 
 /**
  * Fluxo:
@@ -283,6 +284,22 @@ const Setup: React.FC = () => {
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installed]);
+
+  // Se está carregando (instalado com status), mostra splash screen
+  if (installed && status && !error) {
+    return (
+      <div className="h-screen bg-background flex flex-col items-center justify-center overflow-hidden" style={{ height: '100vh', overflow: 'hidden' }}>
+        <div className="flex flex-col items-center space-y-4">
+          <img 
+            src={loaderWebp} 
+            alt="Carregando" 
+            className="w-32 h-32 object-contain"
+          />
+          <p className="text-sm text-muted-foreground">Configurando</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-background flex flex-col items-center justify-center p-4 space-y-3 overflow-hidden" style={{ height: '100vh', overflow: 'hidden' }}>
