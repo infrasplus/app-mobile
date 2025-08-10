@@ -22,6 +22,15 @@ const Dashboard = () => {
   const [oneSignalReady, setOneSignalReady] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState<boolean>(typeof Notification !== 'undefined' ? Notification.permission === 'granted' : false);
 
+  // Boot gating: mantém a tela de loading até tudo estar pronto
+  const [booting, setBooting] = useState(true);
+  const bootMessages = [
+    'Preparando notificações...',
+    'Conectando ao serviço...',
+    'Sincronizando seu dispositivo...'
+  ];
+  const [bootMessageIndex, setBootMessageIndex] = useState(0);
+
   // Dialog para reativação quando o sistema bloqueia notificações
   const [reauthDialogOpen, setReauthDialogOpen] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -42,6 +51,17 @@ const Dashboard = () => {
       return false;
     }
   };
+
+  // Aguarda até que o push esteja realmente habilitado (ou timeout)
+  const waitForEnabled = async (timeoutMs = 12000) => {
+    const start = Date.now();
+    let enabled = await computeEnabled();
+    while (!enabled && Date.now() - start < timeoutMs) {
+      await new Promise((r) => setTimeout(r, 300));
+      enabled = await computeEnabled();
+    }
+    return enabled;
+  };
   useEffect(() => {
     let t: any;
     const poll = () => {
@@ -54,6 +74,35 @@ const Dashboard = () => {
     poll();
     return () => clearTimeout(t);
   }, [isReady]);
+
+  // Boot: mantém a tela de carregamento até OneSignal estar pronto e status inicial calculado
+  useEffect(() => {
+    const rot = setInterval(() => {
+      setBootMessageIndex((i) => (i + 1) % bootMessages.length);
+    }, 2000);
+
+    const run = async () => {
+      // Espera OneSignal ficar pronto (até 12s)
+      if (!isReady()) {
+        const start = Date.now();
+        while (!isReady() && Date.now() - start < 12000) {
+          await new Promise((r) => setTimeout(r, 150));
+        }
+      }
+      setOneSignalReady(isReady());
+
+      const enabled = await computeEnabled();
+      setIsPushEnabled(enabled);
+      if (enabled) {
+        dismissNotificationBanner();
+      }
+      setBooting(false);
+    };
+    void run();
+
+    return () => clearInterval(rot);
+  }, [isReady, dismissNotificationBanner, bootMessages.length]);
+
   const notifications = [
     {
       id: 1,
@@ -146,7 +195,7 @@ const handleNotificationPermission = async () => {
     }
 
     const subscriptionId = await enablePush();
-    const enabled = await computeEnabled();
+    const enabled = await waitForEnabled();
 
     if (enabled && subscriptionId) {
       setIsPushEnabled(true);
@@ -169,7 +218,7 @@ const verifyAfterSettings = async () => {
     if (perm !== 'denied') {
       try { await enablePush(); } catch {}
     }
-    const enabled = await computeEnabled();
+    const enabled = await waitForEnabled();
     setIsPushEnabled(enabled);
     if (enabled) {
       dismissNotificationBanner();
@@ -179,6 +228,19 @@ const verifyAfterSettings = async () => {
     setVerifying(false);
   }
 };
+
+  if (booting) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center space-y-2">
+            <p className="text-sm text-muted-foreground">{bootMessages[bootMessageIndex]}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
