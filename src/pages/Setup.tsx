@@ -285,22 +285,22 @@ const Setup: React.FC = () => {
   }, [installed]);
 
   return (
-    <div className="h-screen bg-background flex flex-col items-center justify-center p-4 space-y-4 overflow-hidden">
+    <div className="h-screen bg-background flex flex-col items-center justify-center p-4 space-y-3 overflow-hidden" style={{ height: '100vh', overflow: 'hidden' }}>
       {/* Logo */}
-      <div className="flex justify-center mb-2">
+      <div className="flex justify-center mb-1">
         <img 
           src={logoBase} 
           alt="Logo" 
-          className="h-16 w-auto object-contain"
+          className="h-14 w-auto object-contain"
         />
       </div>
 
       {/* Box principal */}
-      <div className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow-sm p-6">
+      <div className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow-sm p-5">
         {!error ? (
           <>
             {/* Título dentro do box */}
-            <h1 className="text-xl font-semibold text-center mb-6">
+            <h1 className="text-lg font-semibold text-center mb-4">
               {installed ? 'Ativando acesso…' : 'Adicione o app à Tela de Início'}
             </h1>
 
@@ -313,11 +313,11 @@ const Setup: React.FC = () => {
               <div className="flex-1">
                 {!installed ? (
                   isSafariIOS ? (
-                    <div className="text-sm text-foreground space-y-3">
+                    <div className="text-sm text-foreground space-y-2">
                       <p className="font-medium">
                         Importante: Para continuar, adicione esta página à tela de início do iPhone.
                       </p>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <p className="flex items-center gap-1">
                           1. Toque em{' '}
                           <img 
@@ -371,12 +371,12 @@ const Setup: React.FC = () => {
 
       {/* Imagem tutorial */}
       {!installed && isSafariIOS && (
-        <div className="w-full max-w-xs mt-4">
+        <div className="w-full max-w-xs mt-2">
           <img 
             src={iphoneTutorial} 
             alt="Tutorial de instalação no iPhone" 
             className="w-full h-auto object-contain"
-            style={{ transform: 'scale(0.7)' }}
+            style={{ transform: 'scale(0.9)' }}
           />
         </div>
       )}
