@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useOneSignal } from '@/hooks/useOneSignal';
 import { persistAuthBackup } from '@/lib/auth-persist';
-import { persistentStorage } from '@/lib/persistent-auth';
 import appleShareIcon from '@/assets/apple-share-icon.png';
 import iphoneTutorial from '@/assets/iphone-tutorial.webp';
 import logoBase from '@/assets/logo-base.png';
@@ -192,7 +191,7 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
     const token = (data as any).email_otp as string;
 
     // Conclui o login no Supabase
-    const { error: vErr } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+    const { error: vErr } = await supabase.auth.verifyOtp({ email, token, type: 'magiclink' });
     if (vErr) throw vErr;
 
     // Aguarda a sessão persistir localmente antes de seguir
@@ -203,16 +202,15 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
         await new Promise((r) => setTimeout(r, 100));
       }
     } catch {}
-    // Backup dos tokens + persistência forte (IndexedDB)
+
+    // Backup dos tokens para resiliência em iOS PWA
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await persistAuthBackup(session);
-        try { await persistentStorage.init(); await persistentStorage.saveSession(session); await persistentStorage.saveAuthCode(theCode); } catch {}
-      }
+      if (session) await persistAuthBackup(session);
     } catch {}
 
   };
+
   useEffect(() => {
     (async () => {
       setError('');
@@ -266,9 +264,6 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
           // PONTE: grava no Cache Storage (principal)
           await writeInstallCodeToCache(newCode);
 
-          // Persistência forte: IndexedDB (sobrevive a force quit no iOS)
-          try { await persistentStorage.init(); await persistentStorage.saveAuthCode(newCode); } catch {}
-
           // Fallbacks leves
           try { setCookie(COOKIE_KEY, newCode, 30); } catch {}
           try { localStorage.setItem(STORAGE_KEY, newCode); } catch {}
@@ -291,10 +286,8 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
           setStatus('Verificando dados de ativação…');
           // Ordem: CacheStorage (principal) -> cookie -> localStorage
           const fromCache = await readAndConsumeInstallCodeFromCache();
-          const fromIDB = await (async () => { try { await persistentStorage.init(); return await persistentStorage.getAuthCode(); } catch { return null; } })();
           const candidate =
             fromCache ||
-            fromIDB ||
             (() => { try { return getCookie(COOKIE_KEY); } catch { return null; } })() ||
             (() => { try { return localStorage.getItem(STORAGE_KEY) || null; } catch { return null; } })();
 
