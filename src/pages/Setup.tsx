@@ -91,25 +91,37 @@ function useIsInstalled() {
   return installed;
 }
 
-/** Detectar se está no Safari/iOS */
-function useIsSafariIOS() {
-  const [isSafariIOS, setIsSafariIOS] = useState(false);
+/** Detectar se está no iOS */
+function useIsIOS() {
+  const [isIOS, setIsIOS] = useState(false);
   useEffect(() => {
-    const checkSafariIOS = () => {
+    const checkIOS = () => {
       const ua = navigator.userAgent;
-      const isIOS = /iPad|iPhone|iPod/.test(ua);
-      const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
-      return isIOS && isSafari;
+      return /iPad|iPhone|iPod/.test(ua);
     };
-    setIsSafariIOS(checkSafariIOS());
+    setIsIOS(checkIOS());
   }, []);
-  return isSafariIOS;
+  return isIOS;
+}
+
+/** Detectar se está no Android */
+function useIsAndroid() {
+  const [isAndroid, setIsAndroid] = useState(false);
+  useEffect(() => {
+    const checkAndroid = () => {
+      const ua = navigator.userAgent;
+      return /Android/.test(ua);
+    };
+    setIsAndroid(checkAndroid());
+  }, []);
+  return isAndroid;
 }
 
 const Setup: React.FC = () => {
   const navigate = useNavigate();
   const installed = useIsInstalled();
-  const isSafariIOS = useIsSafariIOS();
+  const isIOS = useIsIOS();
+  const isAndroid = useIsAndroid();
   const [status, setStatus] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [code, setCode] = useState<string | null>(null);
@@ -329,7 +341,7 @@ const Setup: React.FC = () => {
               )}
               <div className="flex-1">
                 {!installed ? (
-                  isSafariIOS ? (
+                  isIOS ? (
                     <div className="text-sm text-foreground space-y-2">
                       <p className="font-medium">
                         Importante: Para continuar, adicione esta página à tela de início do iPhone.
@@ -348,9 +360,20 @@ const Setup: React.FC = () => {
                         <p>3. Após adicionar, abra o app apenas pelo atalho criado na sua tela de início</p>
                       </div>
                     </div>
+                  ) : isAndroid ? (
+                    <div className="text-sm text-foreground space-y-2">
+                      <p className="font-medium">
+                        Para continuar, adicione esta página à tela de início do Android.
+                      </p>
+                      <div className="space-y-1">
+                        <p>1. Toque no menu (três pontos) no canto superior direito do navegador.</p>
+                        <p>2. Procure e toque em "Adicionar à tela inicial" ou "Instalar app".</p>
+                        <p>3. Após adicionar, abra o app apenas pelo atalho criado na sua tela de início</p>
+                      </div>
+                    </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      Toque em <b>Compartilhar</b> no Safari e depois <b>Adicionar à Tela de Início</b>. Ao abrir pelo atalho, o acesso será ativado automaticamente.
+                      Adicione esta página à tela de início do seu dispositivo. Ao abrir pelo atalho, o acesso será ativado automaticamente.
                     </p>
                   )
                 ) : (
@@ -387,13 +410,13 @@ const Setup: React.FC = () => {
       </div>
 
       {/* Imagem tutorial */}
-      {!installed && isSafariIOS && (
+      {!installed && isIOS && (
         <div className="w-full max-w-xs mt-2">
           <img 
             src={iphoneTutorial} 
             alt="Tutorial de instalação no iPhone" 
             className="w-full h-auto object-contain"
-            style={{ transform: 'scale(0.9)' }}
+            style={{ transform: 'scale(1.08)' }}
           />
         </div>
       )}
