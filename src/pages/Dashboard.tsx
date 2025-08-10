@@ -164,7 +164,7 @@ const handleNotificationPermission = async () => {
 )}
       </div>
 
-      <BottomNav />
+      {!IS_UI_PREVIEW && <BottomNav />}
     </div>
   );
 };
