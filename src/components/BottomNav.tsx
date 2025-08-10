@@ -13,7 +13,7 @@ export const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-3 min-h-16 pt-2 pb-10">
+      <div className="grid grid-cols-3 min-h-16 pt-2.5 pb-10">
         {navItems.map(({ icon: Icon, label, path }) => {
           const isActive = location.pathname === path;
 
