@@ -2,6 +2,15 @@ import { Home, Bell, Settings } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export const BottomNav = () => {
+  const IS_UI_PREVIEW = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/ui-preview') ||
+    new URLSearchParams(window.location.search).has('uiPreview')
+  );
+
+  if (IS_UI_PREVIEW) {
+    return null; // Não renderiza nada em modo preview
+  }
+
   const location = useLocation();
   const navigate = useNavigate();
 
