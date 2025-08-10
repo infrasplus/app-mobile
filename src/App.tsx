@@ -1,5 +1,4 @@
-
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import React, { Suspense, lazy } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -13,6 +12,8 @@ import ApiGenerateLink from "./pages/ApiGenerateLink";
 import Setup from "./pages/Setup";
 
 const queryClient = new QueryClient();
+const SonnerLazy = lazy(() => import("@/components/ui/sonner").then(m => ({ default: m.Toaster })));
+
 
 const UnauthScreen = () => (
   <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -35,61 +36,74 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <Navigate to={`/setup${location.search}`} replace />;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <Sonner />
-      <BrowserRouter>
-          <Routes>
-            {/* Página pública para preparar instalação e ativar login pós-instalação */}
-            <Route path="/setup" element={<Setup />} />
+const App = () => {
+  const isUIPreview = () =>
+    typeof window !== 'undefined' && (
+      window.location.pathname.startsWith('/ui-preview') ||
+      new URLSearchParams(window.location.search).has('uiPreview')
+    );
 
-            <Route path="/api/generate-link" element={<ApiGenerateLink />} />
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/notifications" 
-              element={
-                <ProtectedRoute>
-                  <Notifications />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/notification-settings" 
-              element={
-                <ProtectedRoute>
-                  <NotificationSettings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </QueryClientProvider>
-);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        {!isUIPreview() && (
+          <Suspense fallback={null}>
+            <SonnerLazy />
+          </Suspense>
+        )}
+        <BrowserRouter>
+            <Routes>
+              {/* Página pública para preparar instalação e ativar login pós-instalação */}
+              <Route path="/setup" element={<Setup />} />
+
+              <Route path="/ui-preview" element={<Dashboard />} />
+              <Route path="/api/generate-link" element={<ApiGenerateLink />} />
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/notifications" 
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/notification-settings" 
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+  );
+};
 
 export default App;
