@@ -11,7 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useOneSignal } from '@/hooks/useOneSignal';
-
+import { toast } from '@/hooks/use-toast';
 
 
 const Dashboard = () => {
@@ -150,10 +150,30 @@ const Dashboard = () => {
 
 
 const handleNotificationPermission = async () => {
-  // Esconde o banner e mostra status "Verificando..." imediatamente
-  setActivating(true);
-  setChecking(true);
   try {
+    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+
+    // Se já está bloqueado pelo sistema, abre o modal instantaneamente
+    if (perm === 'denied') {
+      setReauthDialogOpen(true);
+      return;
+    }
+    // Em iOS, às vezes o perm é "granted" mas o sistema está bloqueado; se OneSignal já estiver pronto
+    // e não estiver optedIn, abrimos o modal imediatamente
+    if (isIOS && oneSignalReady) {
+      try {
+        const opted = !!(window as any)?.OneSignal?.User?.PushSubscription?.optedIn;
+        if (perm === 'granted' && !opted) {
+          setReauthDialogOpen(true);
+          return;
+        }
+      } catch {}
+    }
+
+    // Segue o fluxo normal: esconder banner e entrar em verificação
+    setActivating(true);
+    setChecking(true);
+
     const subscriptionId = await enablePush().catch(() => null);
     const enabled = await waitForEnabled();
 
@@ -162,15 +182,12 @@ const handleNotificationPermission = async () => {
       dismissNotificationBanner();
       setChecking(false);
       setActivating(false);
-      // Refresh suave para garantir que o estado reflita imediatamente
       setTimeout(() => navigate(0), 300);
       return;
     }
 
-    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
-    if (perm === 'denied' || (isIOS && perm === 'granted' && !enabled)) {
-      setReauthDialogOpen(true);
-    }
+    // Se chegou aqui e não habilitou, abre o modal
+    setReauthDialogOpen(true);
   } catch (e) {
     console.error('[Dashboard] Falha ao ativar notificações:', e);
     const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
@@ -186,6 +203,7 @@ const handleNotificationPermission = async () => {
 
 const verifyAfterSettings = async () => {
   setVerifying(true);
+  setChecking(true);
   try {
     const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
     if (perm !== 'denied') {
@@ -196,9 +214,16 @@ const verifyAfterSettings = async () => {
     if (enabled) {
       dismissNotificationBanner();
       setReauthDialogOpen(false);
+      setTimeout(() => navigate(0), 300);
+    } else {
+      toast({
+        title: 'Ainda não foi ativado',
+        description: 'Confira os passos e tente novamente. Assim que ativar, atualizaremos a tela automaticamente.',
+      });
     }
   } finally {
     setVerifying(false);
+    setChecking(false);
   }
 };
 useEffect(() => {
