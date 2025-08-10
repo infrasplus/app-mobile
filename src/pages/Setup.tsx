@@ -183,6 +183,7 @@ const Setup: React.FC = () => {
   const [status, setStatus] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [code, setCode] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
   const exchangingRef = useRef(false);
 
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -193,7 +194,7 @@ const { isReady } = useOneSignal();
 // Preload assets for faster UI paint (logo, loader)
 useEffect(() => {
   try {
-    const assets = [loaderWebp, logoSvg];
+    const assets = [loaderWebp, logoSvg, appleShareIcon, iphoneTutorial, logoBase];
     assets.forEach((src) => {
       const img = new Image();
       img.decoding = 'async';
@@ -314,6 +315,7 @@ try {
         }
 
         try {
+          setGenerating(true);
           setStatus('Preparando instalação...');
           const s = new URLSearchParams({ flow: 'create-install', email });
           if (name) s.set('name', name);
@@ -348,6 +350,7 @@ await writeInstallCodeToCache(newCode);
           console.error('create-install error', e);
           setError(e?.message || 'Não foi possível preparar a instalação.');
           setStatus('');
+          setGenerating(false);
           return;
         }
       }
@@ -395,6 +398,21 @@ const candidate =
 
   // Se está carregando (instalado com status), mostra splash screen
   if (installed && status && !error) {
+    return (
+      <div className="h-screen bg-white flex flex-col items-center justify-center overflow-hidden" style={{ height: '100vh', overflow: 'hidden', backgroundColor: '#fff' }}>
+        <img 
+          src={loaderWebp} 
+          alt="Carregando"
+          loading="eager"
+          fetchPriority="high"
+          className="w-[100px] h-[100px] object-contain"
+        />
+      </div>
+    );
+  }
+  
+  // Splash while generating activation code before installation
+  if (!installed && !error && !existingCode && generating) {
     return (
       <div className="h-screen bg-white flex flex-col items-center justify-center overflow-hidden" style={{ height: '100vh', overflow: 'hidden', backgroundColor: '#fff' }}>
         <img 
