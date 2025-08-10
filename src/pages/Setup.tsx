@@ -285,7 +285,7 @@ const Setup: React.FC = () => {
   }, [installed]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 space-y-4">
+    <div className="h-screen bg-background flex flex-col items-center justify-center p-4 space-y-4 overflow-hidden">
       {/* Logo */}
       <div className="flex justify-center mb-2">
         <img 
@@ -313,9 +313,9 @@ const Setup: React.FC = () => {
               <div className="flex-1">
                 {!installed ? (
                   isSafariIOS ? (
-                    <div className="text-sm text-muted-foreground space-y-3">
-                      <p className="font-medium text-amber-600">
-                        ⚠️ Importante: Para continuar, adicione esta página à tela de início do iPhone.
+                    <div className="text-sm text-foreground space-y-3">
+                      <p className="font-medium">
+                        Importante: Para continuar, adicione esta página à tela de início do iPhone.
                       </p>
                       <div className="space-y-2">
                         <p className="flex items-center gap-1">
@@ -325,10 +325,10 @@ const Setup: React.FC = () => {
                             alt="Ícone de compartilhar" 
                             className="inline-block w-4 h-4 object-contain mx-1"
                           />
-                          {' '}na barra de menus.
+                          {' '}botão Compartilhar na barra de menus.
                         </p>
                         <p>2. Role para baixo a lista de opções e toque em "Adicionar à Tela de Início".</p>
-                        <p>3. Então, toque em "Adicionar" no canto superior direito</p>
+                        <p>3. Após adicionar, abra o app apenas pelo atalho criado na sua tela de início</p>
                       </div>
                     </div>
                   ) : (
@@ -371,15 +371,12 @@ const Setup: React.FC = () => {
 
       {/* Imagem tutorial (fora do box) */}
       {!installed && isSafariIOS && (
-        <div className="w-full max-w-md space-y-4">
+        <div className="w-full max-w-xs">
           <img 
             src={iphoneTutorial} 
             alt="Tutorial de instalação no iPhone" 
             className="w-full"
           />
-          <p className="text-xs text-muted-foreground text-center">
-            Após adicionar, abra o app pelo atalho na tela inicial (não use mais o Safari).
-          </p>
         </div>
       )}
     </div>
