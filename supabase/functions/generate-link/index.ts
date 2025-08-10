@@ -28,9 +28,22 @@ Deno.serve(async (req) => {
     const name = url.searchParams.get('name') || undefined;
     const wh_id = url.searchParams.get('wh_id') || undefined;
     const inst = url.searchParams.get('inst') || undefined;
-    const redirectTo = url.searchParams.get('redirect_to') || undefined;
+    const rawRedirectTo = url.searchParams.get('redirect_to');
+    const allowedOrigins = new Set<string>([
+      'https://savvy-clinic-connect.lovable.app',
+      'http://localhost:5173',
+      'http://localhost:4173',
+    ]);
+    let redirectTo: string | undefined = undefined;
+    if (rawRedirectTo) {
+      try {
+        const rt = new URL(rawRedirectTo);
+        if (allowedOrigins.has(rt.origin)) {
+          redirectTo = rt.toString();
+        }
+      } catch {}
+    }
     const mode = url.searchParams.get('mode') || 'redirect'; // 'redirect' | 'json'
-
     // Novos parâmetros para o fluxo de instalação
     const flow = url.searchParams.get('flow'); // 'create-install' | 'exchange-install'
     const code = url.searchParams.get('code') || undefined;
@@ -87,6 +100,9 @@ Deno.serve(async (req) => {
       if (wh_id) metadata.wh_id = wh_id;
       if (inst) metadata.inst = inst;
 
+      // Define TTL curto e uso único
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
       const { error: insertError } = await admin
         .from('auth_install_codes')
         .insert({
@@ -94,6 +110,8 @@ Deno.serve(async (req) => {
           user_id: user.id,
           email,
           metadata: Object.keys(metadata).length ? metadata : null,
+          expires_at: expiresAt,
+          max_uses: 1,
         });
 
       if (insertError) {
@@ -198,13 +216,11 @@ Deno.serve(async (req) => {
     }
 
     if (mode === 'json') {
-      const emailOtp = (linkData?.properties as any)?.email_otp as string | undefined;
       return jsonResponse({
         ok: true,
         email,
         user_id: user.id,
         action_link: actionLink,
-        email_otp: emailOtp ?? null,
         created: !!user?.created_at,
       });
     }
