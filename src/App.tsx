@@ -35,62 +35,70 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <Navigate to={`/setup${location.search}`} replace />;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <Sonner />
-      <BrowserRouter>
-          <Routes>
-            {/* Página pública para preparar instalação e ativar login pós-instalação */}
-            <Route path="/setup" element={<Setup />} />
+const App = () => {
+  const isUIPreview = () =>
+    typeof window !== 'undefined' && (
+      window.location.pathname.startsWith('/ui-preview') ||
+      new URLSearchParams(window.location.search).has('uiPreview')
+    );
 
-            <Route path="/ui-preview" element={<Dashboard />} />
-            <Route path="/api/generate-link" element={<ApiGenerateLink />} />
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/notifications" 
-              element={
-                <ProtectedRoute>
-                  <Notifications />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/notification-settings" 
-              element={
-                <ProtectedRoute>
-                  <NotificationSettings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </QueryClientProvider>
-);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        {!isUIPreview() && <Sonner />}
+        <BrowserRouter>
+            <Routes>
+              {/* Página pública para preparar instalação e ativar login pós-instalação */}
+              <Route path="/setup" element={<Setup />} />
+
+              <Route path="/ui-preview" element={<Dashboard />} />
+              <Route path="/api/generate-link" element={<ApiGenerateLink />} />
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/notifications" 
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/notification-settings" 
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </QueryClientProvider>
+  );
+};
 
 export default App;
