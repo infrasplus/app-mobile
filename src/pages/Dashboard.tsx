@@ -69,7 +69,17 @@ const Dashboard = () => {
     poll();
     return () => clearTimeout(t);
   }, [isReady]);
-
+  useEffect(() => {
+    try {
+      const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+      if (granted && sessionStorage.getItem('push_enabled') === '1') {
+        sessionStorage.setItem('push_checking', '1');
+        sessionStorage.setItem('push_grace_until', String(Date.now() + 7000));
+        setChecking(true);
+        setIsPushEnabled(true);
+      }
+    } catch {}
+  }, []);
 
   const notifications = [
     {
@@ -93,13 +103,21 @@ const Dashboard = () => {
       try {
         const OS = getOS();
         const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+        const graceUntil = Number((() => { try { return sessionStorage.getItem('push_grace_until'); } catch { return null; } })() || 0);
         if (!granted) {
           setIsPushEnabled(false);
           setChecking(false);
           try {
             sessionStorage.removeItem('push_checking');
             sessionStorage.removeItem('push_enabled');
+            sessionStorage.removeItem('push_grace_until');
           } catch {}
+          return;
+        }
+        const now = Date.now();
+        if (now < graceUntil) {
+          setChecking(true);
+          try { sessionStorage.setItem('push_checking', '1'); } catch {}
           return;
         }
         if (!oneSignalReady) {
@@ -111,11 +129,17 @@ const Dashboard = () => {
         const opted = !!OS?.User?.PushSubscription?.optedIn;
         const id = OS?.User?.PushSubscription?.id || (await OS?.User?.PushSubscription?.getIdAsync?.());
         const enabled = Boolean(opted && id);
+        if (!enabled && now < graceUntil) {
+          setChecking(true);
+          try { sessionStorage.setItem('push_checking', '1'); } catch {}
+          return;
+        }
         setIsPushEnabled(enabled);
         setChecking(false);
         try {
           if (enabled) {
             sessionStorage.setItem('push_enabled', '1');
+            sessionStorage.removeItem('push_grace_until');
           } else {
             sessionStorage.removeItem('push_enabled');
           }
@@ -207,6 +231,11 @@ const handleNotificationPermission = async () => {
       dismissNotificationBanner();
       setChecking(false);
       setActivating(false);
+      try {
+        sessionStorage.setItem('push_enabled', '1');
+        sessionStorage.setItem('push_checking', '1');
+        sessionStorage.setItem('push_grace_until', String(Date.now() + 7000));
+      } catch {}
       setTimeout(() => navigate(0), 300);
       return;
     }
@@ -239,6 +268,11 @@ const verifyAfterSettings = async () => {
     if (enabled) {
       dismissNotificationBanner();
       setReauthDialogOpen(false);
+      try {
+        sessionStorage.setItem('push_enabled', '1');
+        sessionStorage.setItem('push_checking', '1');
+        sessionStorage.setItem('push_grace_until', String(Date.now() + 7000));
+      } catch {}
       setTimeout(() => navigate(0), 300);
     } else {
       toast({
@@ -265,7 +299,7 @@ useEffect(() => {
       
       <div className="p-4 space-y-4">
         {/* Banner de Notificações */}
-        {!isPushEnabled && !activating && (
+        {!isPushEnabled && !activating && !checking && (
           <Card className="bg-accent/10 border-accent">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
@@ -297,7 +331,7 @@ useEffect(() => {
             <div className="flex items-center gap-2">
               {checking ? (
                 <>
-                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-accent pulse" />
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-accent animate-pulse" />
                   <span className="text-sm font-medium">Verificando...</span>
                 </>
               ) : (

@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         setClinicName('');
       }
-      setAuthInitialized(true);
+      if (session) setAuthInitialized(true);
       // Persist backup of tokens after auth changes (defer to avoid deadlocks)
       setTimeout(async () => {
         try {
@@ -57,31 +57,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }, 0);
     });
 
-    // Attempt to restore session from backup if none is present (especially for iOS PWA)
-    setTimeout(async () => {
+    (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          const backup = await readAuthBackup();
-          if (backup?.access_token && backup?.refresh_token) {
-            await supabase.auth.setSession({ access_token: backup.access_token, refresh_token: backup.refresh_token });
+        if (session) {
+          setIsAuthenticated(true);
+          const user = session?.user as any;
+          if (user) {
+            const raw = user.user_metadata?.name || user.user_metadata?.full_name || user.email || 'Usuário';
+            const formatted = String(raw).replace(/[._-]/g, ' ').trim();
+            setClinicName(formatted);
           }
+          setAuthInitialized(true);
+          return;
+        }
+        const backup = await readAuthBackup();
+        if (backup?.access_token && backup?.refresh_token) {
+          await supabase.auth.setSession({ access_token: backup.access_token, refresh_token: backup.refresh_token });
+        }
+        const { data: { session: s2 } } = await supabase.auth.getSession();
+        setIsAuthenticated(!!s2);
+        const user2 = s2?.user as any;
+        if (user2) {
+          const raw = user2.user_metadata?.name || user2.user_metadata?.full_name || user2.email || 'Usuário';
+          const formatted = String(raw).replace(/[._-]/g, ' ').trim();
+          setClinicName(formatted);
+        } else {
+          setClinicName('');
         }
       } catch (e) {
-        console.warn('Auth restore failed', e);
-      }
-    }, 0);
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-      const user = session?.user as any;
-      if (user) {
-        const raw = user.user_metadata?.name || user.user_metadata?.full_name || user.email || 'Usuário';
-        const formatted = String(raw).replace(/[._-]/g, ' ').trim();
-        setClinicName(formatted);
+        console.warn('Auth init failed', e);
+      } finally {
         setAuthInitialized(true);
       }
-    });
+    })();
 
     return () => {
       subscription?.unsubscribe();
