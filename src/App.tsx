@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import Dashboard from "./pages/Dashboard";
+import PreviewDashboard from "./pages/PreviewDashboard";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import NotificationSettings from "./pages/NotificationSettings";
@@ -58,7 +59,7 @@ const App = () => (
             <Route path="/setup" element={<Setup />} />
             
             {/* LOVABLE PREVIEW: Rota de demonstração sem autenticação */}
-            <Route path="/preview" element={<Dashboard />} />
+            <Route path="/preview" element={<PreviewDashboard />} />
 
             <Route path="/api/generate-link" element={<ApiGenerateLink />} />
             <Route 
