@@ -1,4 +1,13 @@
-import type { Session } from '@supabase/supabase-js';
+// src/lib/auth-persist.ts
+
+// Tipo local em vez de importar do supabase-js
+type SessionLike = {
+  access_token: string;
+  refresh_token: string;
+  expires_at?: number | null;
+  provider_token?: string | null;
+  user?: unknown;
+};
 
 /**
  * Backup de sessão do Supabase em IndexedDB (mais estável no iOS).
@@ -97,7 +106,7 @@ function deleteCookie(name: string) {
 }
 
 // ---------- API ----------
-export async function persistAuthBackup(session: Session) {
+export async function persistAuthBackup(session: SessionLike) {
   const payload: AuthBackup = {
     access_token: session.access_token,
     refresh_token: session.refresh_token,
@@ -106,11 +115,7 @@ export async function persistAuthBackup(session: Session) {
     user: session.user ?? null,
   };
 
-  try {
-    await idbSet<AuthBackup>(IDB_KEY, payload);
-  } catch {
-    // ignore
-  }
+  try { await idbSet<AuthBackup>(IDB_KEY, payload); } catch {}
 
   // Fallbacks (não confie neles no iOS)
   try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch {}
@@ -118,13 +123,11 @@ export async function persistAuthBackup(session: Session) {
 }
 
 export async function readAuthBackup(): Promise<AuthBackup | null> {
-  // 1) Tenta IDB
   try {
     const fromIDB = await idbGet<AuthBackup>(IDB_KEY);
     if (fromIDB?.access_token && fromIDB?.refresh_token) return fromIDB;
   } catch {}
 
-  // 2) Tenta LS
   try {
     const fromLS = localStorage.getItem(LS_KEY);
     if (fromLS) {
@@ -133,7 +136,6 @@ export async function readAuthBackup(): Promise<AuthBackup | null> {
     }
   } catch {}
 
-  // 3) Tenta Cookie
   try {
     const fromCookie = getCookie(COOKIE_KEY);
     if (fromCookie) {
@@ -151,7 +153,6 @@ export async function clearAuthBackup() {
   try { deleteCookie(COOKIE_KEY); } catch {}
 }
 
-/** Opcional: solicitar "persistent storage" (não quebra no Safari) */
 export async function tryPersistStorage() {
   try {
     // @ts-ignore

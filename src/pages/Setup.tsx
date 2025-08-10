@@ -248,13 +248,13 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
     const token = (data as any).email_otp as string;
 
     // Conclui o login no Supabase
-    const { error: vErr } = await supabase.auth.verifyOtp({ email, token, type: 'magiclink' });
+    const { error: vErr } = await (supabase.auth as any).verifyOtp({ email, token, type: 'email' });
     if (vErr) throw vErr;
 
     // Aguarda a sessão persistir localmente antes de seguir
     try {
       for (let i = 0; i < 40; i++) {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await (supabase.auth as any).getSession();
         if (session) break;
         await new Promise((r) => setTimeout(r, 100));
       }
@@ -262,7 +262,7 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
 
     // Backup dos tokens para resiliência em iOS PWA
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await (supabase.auth as any).getSession();
       if (session) await persistAuthBackup(session);
     } catch {}
 
@@ -271,11 +271,22 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
   useEffect(() => {
     (async () => {
       setError('');
+      // Se já existe sessão válida, não precisa de ativação
+try {
+  const { data: { session } } = await (supabase.auth as any).getSession();
+  if (session) {
+    await persistAuthBackup(session); // reforça backup
+    navigate('/');
+    return;
+  }
+} catch {}
+
       // Caso 1: Já instalado E já veio com ?code=...
       if (installed && existingCode && !exchangingRef.current) {
         try {
           exchangingRef.current = true;
           setStatus('Ativando seu acesso...');
+          await writeInstallCodeToIDB(existingCode); // salva o code também neste caminho
           await exchangeInstall(existingCode);
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
           try { deleteCookie(COOKIE_KEY); } catch {}
@@ -358,6 +369,7 @@ const candidate =
           if (candidate) {
             exchangingRef.current = true;
             setStatus('Ativando seu acesso...');
+            await writeInstallCodeToIDB(candidate); // garante o code no storage do PWA
             await exchangeInstall(candidate);
             try { localStorage.removeItem(STORAGE_KEY); } catch {}
             try { deleteCookie(COOKIE_KEY); } catch {}
