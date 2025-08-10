@@ -12,8 +12,8 @@ export const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-      <div className="grid grid-cols-3 h-16 pb-4 pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-[env(safe-area-inset-bottom)]">
+      <div className="grid grid-cols-3 min-h-16 pt-2 pb-10">
         {navItems.map(({ icon: Icon, label, path }) => {
           const isActive = location.pathname === path;
 
@@ -21,7 +21,7 @@ export const BottomNav = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className={`w-full h-full flex flex-col items-center justify-center gap-1 transition-colors ${
+              className={`w-full h-full flex flex-col items-center justify-center gap-1.5 transition-colors ${
                 isActive
                   ? 'text-primary'
                   : 'text-muted-foreground hover:bg-muted/50'
