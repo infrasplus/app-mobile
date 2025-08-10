@@ -8,7 +8,7 @@ import {
   ExternalLink, 
   ChevronRight 
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+
 import { useEffect, useState } from 'react';
 import { useOneSignal } from '@/hooks/useOneSignal';
 import { toast } from '@/hooks/use-toast';
@@ -16,20 +16,18 @@ import { toast } from '@/hooks/use-toast';
 
 const Dashboard = () => {
   const { showNotificationBanner, dismissNotificationBanner } = useAuth();
-  const navigate = useNavigate();
+  
   const { enablePush, isReady } = useOneSignal();
 
   const [oneSignalReady, setOneSignalReady] = useState(false);
-  const [isPushEnabled, setIsPushEnabled] = useState<boolean>(() => {
-    try { return sessionStorage.getItem('push_enabled') === '1'; } catch { return typeof Notification !== 'undefined' ? Notification.permission === 'granted' : false; }
-  });
+  const [isPushEnabled, setIsPushEnabled] = useState<boolean>(false);
 
 
   // Dialog para reativação quando o sistema bloqueia notificações
   const [reauthDialogOpen, setReauthDialogOpen] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [activating, setActivating] = useState(false);
-  const [checking, setChecking] = useState(() => { try { return sessionStorage.getItem('push_checking') === '1'; } catch { return false; } });
+  const [checking, setChecking] = useState(false);
   // Detecção básica de plataforma
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const isIOS = /iPad|iPhone|iPod/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
@@ -69,17 +67,6 @@ const Dashboard = () => {
     poll();
     return () => clearTimeout(t);
   }, [isReady]);
-  useEffect(() => {
-    try {
-      const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
-      if (granted && sessionStorage.getItem('push_enabled') === '1') {
-        sessionStorage.setItem('push_checking', '1');
-        sessionStorage.setItem('push_grace_until', String(Date.now() + 7000));
-        setChecking(true);
-        setIsPushEnabled(true);
-      }
-    } catch {}
-  }, []);
 
   const notifications = [
     {
@@ -103,50 +90,20 @@ const Dashboard = () => {
       try {
         const OS = getOS();
         const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
-        const graceUntil = Number((() => { try { return sessionStorage.getItem('push_grace_until'); } catch { return null; } })() || 0);
         if (!granted) {
           setIsPushEnabled(false);
-          setChecking(false);
-          try {
-            sessionStorage.removeItem('push_checking');
-            sessionStorage.removeItem('push_enabled');
-            sessionStorage.removeItem('push_grace_until');
-          } catch {}
-          return;
-        }
-        const now = Date.now();
-        if (now < graceUntil) {
-          setChecking(true);
-          try { sessionStorage.setItem('push_checking', '1'); } catch {}
           return;
         }
         if (!oneSignalReady) {
-          // Permissão concedida mas SDK ainda não pronto: evita falso negativo
-          setChecking(true);
-          try { sessionStorage.setItem('push_checking', '1'); } catch {}
+          // SDK ainda carregando: mantenha o estado atual para evitar flicker
           return;
         }
         const opted = !!OS?.User?.PushSubscription?.optedIn;
         const id = OS?.User?.PushSubscription?.id || (await OS?.User?.PushSubscription?.getIdAsync?.());
         const enabled = Boolean(opted && id);
-        if (!enabled && now < graceUntil) {
-          setChecking(true);
-          try { sessionStorage.setItem('push_checking', '1'); } catch {}
-          return;
-        }
         setIsPushEnabled(enabled);
-        setChecking(false);
-        try {
-          if (enabled) {
-            sessionStorage.setItem('push_enabled', '1');
-            sessionStorage.removeItem('push_grace_until');
-          } else {
-            sessionStorage.removeItem('push_enabled');
-          }
-          sessionStorage.removeItem('push_checking');
-        } catch {}
       } catch (e) {
-        // Em erros transitórios, não force estado para falso para evitar flicker
+        // Ignora erros transitórios para evitar mudanças visuais desnecessárias
       }
     };
 
@@ -219,7 +176,7 @@ const handleNotificationPermission = async () => {
       } catch {}
     }
 
-    // Segue o fluxo normal: esconder banner e entrar em verificação
+    // Fluxo de ativação: mostrar "verificando" somente durante a ação do usuário
     setActivating(true);
     setChecking(true);
 
@@ -231,12 +188,6 @@ const handleNotificationPermission = async () => {
       dismissNotificationBanner();
       setChecking(false);
       setActivating(false);
-      try {
-        sessionStorage.setItem('push_enabled', '1');
-        sessionStorage.setItem('push_checking', '1');
-        sessionStorage.setItem('push_grace_until', String(Date.now() + 7000));
-      } catch {}
-      setTimeout(() => navigate(0), 300);
       return;
     }
 
@@ -244,14 +195,13 @@ const handleNotificationPermission = async () => {
     setReauthDialogOpen(true);
   } catch (e) {
     console.error('[Dashboard] Falha ao ativar notificações:', e);
-    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
-    if (perm === 'denied') {
+    const p = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+    if (p === 'denied') {
       setReauthDialogOpen(true);
     }
   } finally {
-    // Se não habilitou, volta a exibir o banner e sai do modo de verificação
     setChecking(false);
-    if (!isPushEnabled) setActivating(false);
+    setActivating(false);
   }
 };
 
@@ -268,12 +218,6 @@ const verifyAfterSettings = async () => {
     if (enabled) {
       dismissNotificationBanner();
       setReauthDialogOpen(false);
-      try {
-        sessionStorage.setItem('push_enabled', '1');
-        sessionStorage.setItem('push_checking', '1');
-        sessionStorage.setItem('push_grace_until', String(Date.now() + 7000));
-      } catch {}
-      setTimeout(() => navigate(0), 300);
     } else {
       toast({
         title: 'Ainda não foi ativado',
@@ -285,13 +229,6 @@ const verifyAfterSettings = async () => {
     setChecking(false);
   }
 };
-useEffect(() => {
-  if (!checking) return;
-  const t = setTimeout(() => {
-    try { navigate(0); } catch {}
-  }, 12000);
-  return () => clearTimeout(t);
-}, [checking, navigate]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
