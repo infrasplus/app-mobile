@@ -1,25 +1,15 @@
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { 
   Bell, 
   ExternalLink,
-  LogOut, 
   ChevronRight
 } from 'lucide-react';
 
 const Settings = () => {
-  const { logout } = useAuth();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   const settingsOptions = [
     {
@@ -36,14 +26,6 @@ const Settings = () => {
       action: () => { window.open('https://web.secretariaplus.com.br', '_blank', 'noopener,noreferrer'); },
       showArrow: false
     },
-    {
-      icon: LogOut,
-      title: 'Sair',
-      description: 'Fazer logout da conta',
-      action: handleLogout,
-      showArrow: false,
-      textColor: 'text-red-600'
-    }
   ];
 
   return (
@@ -66,10 +48,10 @@ const Settings = () => {
                     className="w-full p-4 text-left hover:bg-muted/50 transition-colors flex items-center gap-4"
                   >
                     <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                      <IconComponent className={`h-5 w-5 ${option.textColor || 'text-primary'}`} />
+                      <IconComponent className={"h-5 w-5 text-primary"} />
                     </div>
                     <div className="flex-1">
-                      <h3 className={`font-medium ${option.textColor || 'text-primary'} flex items-center gap-2`}>
+                      <h3 className={"font-medium text-primary flex items-center gap-2"}>
                         {option.title}
                         {isNotification && (
                           <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">

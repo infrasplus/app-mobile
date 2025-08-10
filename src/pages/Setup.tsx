@@ -110,11 +110,11 @@ const Setup: React.FC = () => {
     const interval = setInterval(() => {
       i = (i + 1) % phrases.length;
       setStatus(phrases[i]);
-    }, 1000);
+    }, 2000);
     const start = Date.now();
     try {
       while (!isReady() && Date.now() - start < timeoutMs) {
-        await new Promise((r) => setTimeout(r, 150));
+        await new Promise((r) => setTimeout(r, 300));
       }
     } finally {
       clearInterval(interval);

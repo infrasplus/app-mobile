@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   ExternalLink, 
-  ChevronRight, 
-  X
+  ChevronRight 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -82,8 +81,7 @@ const handleNotificationPermission = async () => {
                       onClick={handleNotificationPermission}
                       className="bg-accent hover:bg-accent/90 text-primary"
                       size="sm"
-                      disabled={!oneSignalReady}
-                      title={!oneSignalReady ? 'Carregando OneSignal...' : undefined}
+                      aria-busy={!oneSignalReady}
                     >
                       Ativar Agora
                     </Button>
