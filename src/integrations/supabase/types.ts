@@ -18,27 +18,51 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          device_fingerprint: string | null
+          device_info: Json | null
+          devices_info: Json | null
           email: string
-          expires_at: string
+          expires_at: string | null
+          ip_addresses: string[] | null
+          is_active: boolean | null
+          last_used_at: string | null
+          max_uses: number | null
           metadata: Json | null
+          use_count: number | null
           used_at: string | null
           user_id: string
         }
         Insert: {
           code?: string
           created_at?: string
+          device_fingerprint?: string | null
+          device_info?: Json | null
+          devices_info?: Json | null
           email: string
-          expires_at?: string
+          expires_at?: string | null
+          ip_addresses?: string[] | null
+          is_active?: boolean | null
+          last_used_at?: string | null
+          max_uses?: number | null
           metadata?: Json | null
+          use_count?: number | null
           used_at?: string | null
           user_id: string
         }
         Update: {
           code?: string
           created_at?: string
+          device_fingerprint?: string | null
+          device_info?: Json | null
+          devices_info?: Json | null
           email?: string
-          expires_at?: string
+          expires_at?: string | null
+          ip_addresses?: string[] | null
+          is_active?: boolean | null
+          last_used_at?: string | null
+          max_uses?: number | null
           metadata?: Json | null
+          use_count?: number | null
           used_at?: string | null
           user_id?: string
         }
@@ -115,7 +139,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_old_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_unused_install_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      use_install_code_simple: {
+        Args: { p_code: string; p_device_info?: Json; p_ip_address?: string }
+        Returns: {
+          is_valid: boolean
+          email: string
+          user_id: string
+          metadata: Json
+        }[]
+      }
+      validate_and_use_install_code: {
+        Args: {
+          p_code: string
+          p_device_fingerprint?: string
+          p_device_info?: Json
+          p_ip_address?: string
+        }
+        Returns: {
+          is_valid: boolean
+          email: string
+          user_id: string
+          metadata: Json
+          error_message: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
