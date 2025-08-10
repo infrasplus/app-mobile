@@ -43,6 +43,74 @@ const Dashboard = () => {
     }
   ];
 
+  // Monitor push status and re-show banner if disabled
+  useEffect(() => {
+    let permissionStatus: any;
+    let intervalId: any;
+
+    const getOS = () => (window as any).OneSignal;
+
+    const compute = async () => {
+      try {
+        const OS = getOS();
+        const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+        const opted = !!OS?.User?.PushSubscription?.optedIn;
+        const id = OS?.User?.PushSubscription?.id || (await OS?.User?.PushSubscription?.getIdAsync?.());
+        const enabled = Boolean(granted && opted && id);
+        setIsPushEnabled(enabled);
+      } catch (e) {
+        // In doubt, be conservative and assume disabled
+        setIsPushEnabled(false);
+      }
+    };
+
+    const onSubChange = () => { void compute(); };
+
+    // Setup listeners once OneSignal is ready
+    if (oneSignalReady) {
+      try {
+        const OS = getOS();
+        OS?.User?.PushSubscription?.addEventListener?.('change', onSubChange);
+      } catch {}
+      void compute();
+    } else {
+      // Even before ready, compute basic permission state
+      void compute();
+    }
+
+    // Listen to browser permission changes (when supported)
+    try {
+      if ('permissions' in navigator && (navigator as any).permissions?.query) {
+        (navigator as any).permissions
+          .query({ name: 'notifications' as any })
+          .then((status: any) => {
+            permissionStatus = status;
+            status.onchange = () => { void compute(); };
+          })
+          .catch(() => {});
+      }
+    } catch {}
+
+    // Re-check on visibility/focus
+    const onFocusOrVisibility = () => { void compute(); };
+    window.addEventListener('focus', onFocusOrVisibility);
+    document.addEventListener('visibilitychange', onFocusOrVisibility);
+
+    // Low-frequency polling as a safety net
+    intervalId = setInterval(() => { void compute(); }, 10000);
+
+    return () => {
+      try {
+        const OS = getOS();
+        OS?.User?.PushSubscription?.removeEventListener?.('change', onSubChange);
+      } catch {}
+      if (permissionStatus) permissionStatus.onchange = null;
+      window.removeEventListener('focus', onFocusOrVisibility);
+      document.removeEventListener('visibilitychange', onFocusOrVisibility);
+      clearInterval(intervalId);
+    };
+  }, [oneSignalReady]);
+
 
 const handleNotificationPermission = async () => {
   try {
