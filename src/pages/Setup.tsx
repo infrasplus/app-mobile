@@ -8,6 +8,7 @@ import { useOneSignal } from '@/hooks/useOneSignal';
 import { persistAuthBackup } from '@/lib/auth-persist';
 import appleShareIcon from '@/assets/apple-share-icon.png';
 import iphoneTutorial from '@/assets/iphone-tutorial.webp';
+import logoBase from '@/assets/logo-base.png';
 
 /**
  * Fluxo:
@@ -284,8 +285,23 @@ const Setup: React.FC = () => {
   }, [installed]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow-sm p-6 space-y-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 space-y-4">
+      {/* Logo */}
+      <div className="flex justify-center mb-2">
+        <img 
+          src={logoBase} 
+          alt="Logo" 
+          className="h-16 w-auto object-contain"
+        />
+      </div>
+
+      {/* Título */}
+      <h1 className="text-xl font-semibold text-center mb-4">
+        {installed ? 'Ativando acesso…' : 'Adicione o app à Tela de Início'}
+      </h1>
+
+      {/* Box principal */}
+      <div className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow-sm p-6">
         {!error ? (
           <>
             <div className="flex items-start gap-3">
@@ -295,12 +311,9 @@ const Setup: React.FC = () => {
                 <AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
               )}
               <div className="flex-1">
-                <h1 className="text-lg font-semibold">
-                  {installed ? 'Ativando acesso…' : 'Adicione o app à Tela de Início'}
-                </h1>
                 {!installed ? (
                   isSafariIOS ? (
-                    <div className="text-sm text-muted-foreground space-y-3 mt-3">
+                    <div className="text-sm text-muted-foreground space-y-3">
                       <p className="font-medium text-amber-600">
                         ⚠️ Importante: Para continuar, adicione esta página à tela de início do iPhone.
                       </p>
@@ -338,19 +351,6 @@ const Setup: React.FC = () => {
                 )}
               </div>
             </div>
-            
-            {!installed && isSafariIOS && (
-              <div className="mt-4 space-y-3">
-                <img 
-                  src={iphoneTutorial} 
-                  alt="Tutorial de instalação no iPhone" 
-                  className="w-full rounded-lg border"
-                />
-                <p className="text-xs text-muted-foreground text-center">
-                  Após adicionar, abra o app pelo atalho na tela inicial (não use mais o Safari).
-                </p>
-              </div>
-            )}
           </>
         ) : (
           <div>
@@ -368,6 +368,20 @@ const Setup: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Imagem tutorial (fora do box) */}
+      {!installed && isSafariIOS && (
+        <div className="w-full max-w-md space-y-4">
+          <img 
+            src={iphoneTutorial} 
+            alt="Tutorial de instalação no iPhone" 
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground text-center">
+            Após adicionar, abra o app pelo atalho na tela inicial (não use mais o Safari).
+          </p>
+        </div>
+      )}
     </div>
   );
 };
