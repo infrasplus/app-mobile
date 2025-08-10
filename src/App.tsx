@@ -50,63 +50,66 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <Sonner />
-      <BrowserRouter>
-          <Routes>
-            {/* Página pública para preparar instalação e ativar login pós-instalação */}
-            <Route path="/setup" element={<Setup />} />
-            
-            {/* LOVABLE PREVIEW: Rota de demonstração sem autenticação */}
-            <Route path="/preview" element={<PreviewDashboard />} />
-
-            <Route path="/api/generate-link" element={<ApiGenerateLink />} />
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/notifications" 
-              element={
-                <ProtectedRoute>
-                  <Notifications />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/notification-settings" 
-              element={
-                <ProtectedRoute>
-                  <NotificationSettings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </QueryClientProvider>
+  <BrowserRouter>
+    <Routes>
+      {/* LOVABLE PREVIEW: Rota completamente isolada */}
+      <Route path="/preview" element={<PreviewDashboard />} />
+      
+      {/* Rotas principais com providers completos */}
+      <Route path="/*" element={
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <Sonner />
+            <Routes>
+              <Route path="/setup" element={<Setup />} />
+              <Route path="/api/generate-link" element={<ApiGenerateLink />} />
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/notifications" 
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/notification-settings" 
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </QueryClientProvider>
+      } />
+    </Routes>
+  </BrowserRouter>
 );
 
 export default App;
