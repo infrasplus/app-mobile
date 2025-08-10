@@ -11,8 +11,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useOneSignal } from '@/hooks/useOneSignal';
-import { OneSignalDebug } from '@/components/OneSignalDebug';
-import { TestNotificationSender } from '@/components/TestNotificationSender';
+
+
 
 const Dashboard = () => {
   const { showNotificationBanner, dismissNotificationBanner } = useAuth();
@@ -49,15 +49,10 @@ const handleNotificationPermission = async () => {
     console.log('[Dashboard] Iniciando processo de permissão...');
     const subscriptionId = await enablePush();
     console.log('[Dashboard] Subscription ID obtido:', subscriptionId);
-    
-    // Mostra feedback visual de sucesso
-    if (subscriptionId) {
-      alert(`Notificações ativadas com sucesso!\nID: ${subscriptionId}`);
-    }
+    // Removido: popups nativos (alert) com Subscription ID
   } catch (e: any) {
-    // Permissão negada ou erro ao registrar o dispositivo
     console.error('[Dashboard] Falha ao ativar notificações:', e);
-    alert(`Erro ao ativar notificações: ${e.message || 'Erro desconhecido'}`);
+    // Removido: alert de erro em produção
   } finally {
     dismissNotificationBanner();
   }
@@ -148,11 +143,6 @@ const handleNotificationPermission = async () => {
           </CardContent>
         </Card>
 
-{/* Debug OneSignal: botão/link oficial fora do banner */}
-<OneSignalDebug />
-
-{/* Teste de envio de notificação */}
-<TestNotificationSender />
       </div>
 
       <BottomNav />
