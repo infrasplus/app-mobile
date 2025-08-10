@@ -295,15 +295,15 @@ const Setup: React.FC = () => {
         />
       </div>
 
-      {/* Título */}
-      <h1 className="text-xl font-semibold text-center mb-4">
-        {installed ? 'Ativando acesso…' : 'Adicione o app à Tela de Início'}
-      </h1>
-
       {/* Box principal */}
       <div className="w-full max-w-md rounded-xl border bg-card text-card-foreground shadow-sm p-6">
         {!error ? (
           <>
+            {/* Título dentro do box */}
+            <h1 className="text-xl font-semibold text-center mb-6">
+              {installed ? 'Ativando acesso…' : 'Adicione o app à Tela de Início'}
+            </h1>
+
             <div className="flex items-start gap-3">
               {installed ? (
                 <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
@@ -325,7 +325,7 @@ const Setup: React.FC = () => {
                             alt="Ícone de compartilhar" 
                             className="inline-block w-4 h-4 object-contain mx-1"
                           />
-                          {' '}botão Compartilhar na barra de menus.
+                          {' '}na barra de menus.
                         </p>
                         <p>2. Role para baixo a lista de opções e toque em "Adicionar à Tela de Início".</p>
                         <p>3. Após adicionar, abra o app apenas pelo atalho criado na sua tela de início</p>
@@ -369,13 +369,14 @@ const Setup: React.FC = () => {
         )}
       </div>
 
-      {/* Imagem tutorial (fora do box) */}
+      {/* Imagem tutorial */}
       {!installed && isSafariIOS && (
-        <div className="w-full max-w-xs">
+        <div className="w-full max-w-xs mt-4">
           <img 
             src={iphoneTutorial} 
             alt="Tutorial de instalação no iPhone" 
-            className="w-full"
+            className="w-full h-auto object-contain"
+            style={{ transform: 'scale(0.7)' }}
           />
         </div>
       )}
