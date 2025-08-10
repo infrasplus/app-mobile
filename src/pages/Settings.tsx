@@ -79,7 +79,7 @@ const Settings = () => {
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {isNotification
-                          ? 'todas as notificações de eventos da IA estão ligadas - em breve, você poderá customizar quais deseja receber.'
+                          ? 'Todas as notificações de eventos da IA estão ligadas - em breve, você poderá customizar quais deseja receber.'
                           : option.description}
                       </p>
                     </div>

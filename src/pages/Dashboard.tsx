@@ -20,6 +20,7 @@ const Dashboard = () => {
   const { enablePush, isReady } = useOneSignal();
 
   const [oneSignalReady, setOneSignalReady] = useState(false);
+  const [isPushEnabled, setIsPushEnabled] = useState<boolean>(typeof Notification !== 'undefined' ? Notification.permission === 'granted' : false);
   useEffect(() => {
     let t: any;
     const poll = () => {
@@ -49,12 +50,14 @@ const handleNotificationPermission = async () => {
     console.log('[Dashboard] Iniciando processo de permissão...');
     const subscriptionId = await enablePush();
     console.log('[Dashboard] Subscription ID obtido:', subscriptionId);
+    if (subscriptionId) {
+      setIsPushEnabled(true);
+      dismissNotificationBanner();
+    }
     // Removido: popups nativos (alert) com Subscription ID
   } catch (e: any) {
     console.error('[Dashboard] Falha ao ativar notificações:', e);
     // Removido: alert de erro em produção
-  } finally {
-    dismissNotificationBanner();
   }
 };
 
@@ -64,7 +67,7 @@ const handleNotificationPermission = async () => {
       
       <div className="p-4 space-y-4">
         {/* Banner de Notificações */}
-        {showNotificationBanner && (
+        {!isPushEnabled && (
           <Card className="bg-accent/10 border-accent">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
@@ -84,27 +87,24 @@ const handleNotificationPermission = async () => {
                     >
                       Ativar Agora
                     </Button>
-                    <Button 
-                      onClick={dismissNotificationBanner}
-                      variant="ghost" 
-                      size="sm"
-                    >
-                      Depois
-                    </Button>
                   </div>
                 </div>
-                <Button
-                  onClick={dismissNotificationBanner}
-                  variant="ghost"
-                  size="sm"
-                  className="p-1"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Painel de Status de Notificações */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${isPushEnabled ? 'bg-success' : 'bg-destructive'}`} />
+              <span className="text-sm font-medium">
+                {isPushEnabled ? 'Notificações Ligadas' : 'Notificações Desligadas'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Central - texto informativo */}
         <Card>

@@ -97,22 +97,14 @@ const NotificationSettings = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Notificações</h1>
+          <h1 className="text-2xl font-bold">Ajustes de Notificação</h1>
         </div>
         <p className="text-sm text-muted-foreground mb-6">
-          todas as notificações de eventos da IA estão ligadas - em breve, você poderá customizar quais deseja receber.
+          Todas as notificações de eventos da IA estão ligadas - em breve, você poderá customizar quais deseja receber.
         </p>
         
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle className="text-lg">Tipos de Alerta da IA</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Configure quais comportamentos dos pacientes devem gerar notificações automáticas
-            </p>
-          </CardHeader>
-        </Card>
 
-        <div className="relative">
+        <div className="relative max-h-[50vh] overflow-hidden">
           <div className="space-y-3 opacity-40 pointer-events-none select-none">
             {notificationTypes.map((type) => (
               <Card key={type.key}>
@@ -138,19 +130,11 @@ const NotificationSettings = () => {
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-background/80 to-background" aria-hidden="true" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="rounded-full px-4 py-2 bg-background/90 backdrop-blur border border-border text-muted-foreground">
-              em breve.
+              em breve
             </div>
           </div>
         </div>
 
-        <Card className="mt-6 bg-muted/50">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground text-center">
-              💡 <strong>Dica:</strong> Recomendamos manter ativadas as notificações de emergência 
-              e comportamentos agressivos para garantir um atendimento adequado.
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       <BottomNav />

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { useOneSignal } from '@/hooks/useOneSignal';
 
 /**
  * Fluxo:
@@ -96,6 +97,30 @@ const Setup: React.FC = () => {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const existingCode = params.get('code');
 
+  const { isReady } = useOneSignal();
+  const extendUntilPushReady = async (timeoutMs = 10000) => {
+    const phrases = [
+      'Configurando seu Aplicativo.',
+      'Puxando seus dados',
+      'Só um minutinho...',
+      'Quase lá'
+    ];
+    let i = 0;
+    setStatus(phrases[0]);
+    const interval = setInterval(() => {
+      i = (i + 1) % phrases.length;
+      setStatus(phrases[i]);
+    }, 1000);
+    const start = Date.now();
+    try {
+      while (!isReady() && Date.now() - start < timeoutMs) {
+        await new Promise((r) => setTimeout(r, 150));
+      }
+    } finally {
+      clearInterval(interval);
+    }
+  };
+
   // Troca code -> OTP -> login
   const exchangeInstall = async (theCode: string) => {
     // Chama edge function para gerar email + email_otp (flow=exchange-install)
@@ -128,8 +153,8 @@ const Setup: React.FC = () => {
           await exchangeInstall(existingCode);
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
           try { deleteCookie(COOKIE_KEY); } catch {}
-          setStatus('Acesso ativado! Redirecionando...');
-          setTimeout(() => navigate('/'), 400);
+          await extendUntilPushReady(10000);
+          navigate('/');
           return;
         } catch (e: any) {
           console.error('exchange (installed + existingCode) error', e);
@@ -203,8 +228,8 @@ const Setup: React.FC = () => {
             await exchangeInstall(candidate);
             try { localStorage.removeItem(STORAGE_KEY); } catch {}
             try { deleteCookie(COOKIE_KEY); } catch {}
-            setStatus('Acesso ativado! Redirecionando...');
-            setTimeout(() => navigate('/'), 400);
+            await extendUntilPushReady(10000);
+            navigate('/');
             return;
           }
 

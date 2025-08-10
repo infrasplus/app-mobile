@@ -13,19 +13,20 @@ export const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-      <div className="flex items-center justify-around px-2 py-2">
+      <div className="grid grid-cols-3 h-[25vh]">
         {navItems.map(({ icon: Icon, label, path }) => {
           const isActive = location.pathname === path;
-          
+
           return (
             <button
               key={path}
               onClick={() => navigate(path)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+              className={`w-full h-full flex flex-col items-center justify-center gap-1 transition-colors ${
                 isActive
-                  ? 'text-primary bg-accent/20'
-                  : 'text-muted-foreground hover:text-primary'
+                  ? 'bg-accent/30 text-primary'
+                  : 'text-muted-foreground hover:bg-muted/50'
               }`}
+              aria-pressed={isActive}
             >
               <Icon size={20} />
               <span className="text-xs">{label}</span>
