@@ -1,12 +1,8 @@
-// src/lib/auth-persist.ts
 import type { Session } from '@supabase/supabase-js';
 
 /**
- * POR QUE ISSO FUNCIONA NO iOS?
- * - iOS pode desalocar o processo do PWA e apagar localStorage.
- * - IndexedDB é a opção mais durável para PWAs no iOS hoje.
- * - Este módulo salva/recupera os tokens principalmente via IDB,
- *   com fallback em localStorage e Cookie (para safety).
+ * Backup de sessão do Supabase em IndexedDB (mais estável no iOS).
+ * Mantém LS/Cookie só como fallback.
  */
 
 type AuthBackup = {
@@ -17,9 +13,7 @@ type AuthBackup = {
   user?: unknown;
 };
 
-// ---------------------------
-// IndexedDB ultra-minimal
-// ---------------------------
+// ---------- IndexedDB ----------
 const IDB_DB_NAME = 'sp-auth-db';
 const IDB_STORE = 'kv';
 const IDB_KEY = 'auth_backup';
@@ -30,9 +24,7 @@ function openIDB(): Promise<IDBDatabase> {
       const req = indexedDB.open(IDB_DB_NAME, 1);
       req.onupgradeneeded = () => {
         const db = req.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE);
-        }
+        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error || new Error('IDB open error'));
@@ -79,9 +71,7 @@ async function idbDel(key: string): Promise<void> {
   db.close();
 }
 
-// ---------------------------
-// Fallbacks (LS / Cookie)
-// ---------------------------
+// ---------- Fallbacks (LS / Cookie) ----------
 const LS_KEY = 'sp_auth_backup';
 const COOKIE_KEY = 'sp_auth_backup';
 
@@ -106,49 +96,32 @@ function deleteCookie(name: string) {
   } catch {}
 }
 
-// ---------------------------
-// API pública usada no app
-// ---------------------------
+// ---------- API ----------
 export async function persistAuthBackup(session: Session) {
+  const payload: AuthBackup = {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_at: session.expires_at ?? null,
+    provider_token: (session as any)?.provider_token ?? null,
+    user: session.user ?? null,
+  };
+
   try {
-    const payload: AuthBackup = {
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at ?? null,
-      provider_token: (session as any)?.provider_token ?? null,
-      user: session.user ?? null,
-    };
-
-    // 1) Canonical: IndexedDB
     await idbSet<AuthBackup>(IDB_KEY, payload);
-
-    // 2) Fallbacks (não-confie neles no iOS, mas ajudam no desktop)
-    try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch {}
-    try { setCookie(COOKIE_KEY, JSON.stringify(payload), 7); } catch {}
-  } catch (e) {
-    // Se IDB falhar (modo privado antigo, etc.), tenta LS/Cookie ao menos
-    try { localStorage.setItem(LS_KEY, JSON.stringify({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at ?? null,
-      provider_token: (session as any)?.provider_token ?? null,
-      user: session.user ?? null,
-    })); } catch {}
-    try { setCookie(COOKIE_KEY, JSON.stringify({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at ?? null,
-      provider_token: (session as any)?.provider_token ?? null,
-      user: session.user ?? null,
-    }), 7); } catch {}
+  } catch {
+    // ignore
   }
+
+  // Fallbacks (não confie neles no iOS)
+  try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch {}
+  try { setCookie(COOKIE_KEY, JSON.stringify(payload), 7); } catch {}
 }
 
 export async function readAuthBackup(): Promise<AuthBackup | null> {
   // 1) Tenta IDB
   try {
     const fromIDB = await idbGet<AuthBackup>(IDB_KEY);
-    if (fromIDB && fromIDB.access_token && fromIDB.refresh_token) return fromIDB;
+    if (fromIDB?.access_token && fromIDB?.refresh_token) return fromIDB;
   } catch {}
 
   // 2) Tenta LS
@@ -178,10 +151,7 @@ export async function clearAuthBackup() {
   try { deleteCookie(COOKIE_KEY); } catch {}
 }
 
-/**
- * Dica opcional: peça persistência de armazenamento quando suportado.
- * Safari ainda é limitado, mas não quebra nada chamar.
- */
+/** Opcional: solicitar "persistent storage" (não quebra no Safari) */
 export async function tryPersistStorage() {
   try {
     // @ts-ignore

@@ -30,6 +30,63 @@ const COOKIE_KEY = 'install_code';  // fallback leve
 const CACHE_NAME = 'install-bridge';
 const CACHE_REQ = '/__install_code';
 
+/** IndexedDB para install_code (mais estável que CacheStorage no iOS) */
+const IDB_DB = 'sp-install-db';
+const IDB_STORE = 'kv';
+const IDB_KEY = 'install_code';
+
+function openInstallIDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('IDB open error'));
+  });
+}
+
+async function idbSetInstall(value: { code: string; ts: number }) {
+  const db = await openInstallIDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const req = tx.objectStore(IDB_STORE).put(value, IDB_KEY);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error || new Error('IDB put error'));
+  });
+  db.close();
+}
+
+async function idbGetInstall(): Promise<{ code: string; ts: number } | undefined> {
+  const db = await openInstallIDB();
+  const out = await new Promise<{ code: string; ts: number } | undefined>((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+    req.onsuccess = () => resolve(req.result as any);
+    req.onerror = () => reject(req.error || new Error('IDB get error'));
+  });
+  db.close();
+  return out;
+}
+
+async function writeInstallCodeToIDB(code: string) {
+  await idbSetInstall({ code, ts: Date.now() });
+}
+
+/** Lê do IDB (não consome). Usa TTL grande; a edge valida TTL/uses. */
+async function readInstallCodeFromIDB(maxAgeMs = 90 * 24 * 60 * 60 * 1000): Promise<string | null> {
+  try {
+    const rec = await idbGetInstall();
+    if (!rec?.code) return null;
+    if (typeof rec.ts === 'number' && Date.now() - rec.ts > maxAgeMs) return null;
+    return String(rec.code);
+  } catch {
+    return null;
+  }
+}
+
+
 /** Helpers básicos de cookie (fallback) */
 function setCookie(name: string, value: string, minutes = 30) {
   const expires = new Date(Date.now() + minutes * 60_000).toUTCString();
@@ -261,10 +318,14 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
           const newCode = (data as any).code as string;
           setCode(newCode);
 
-          // PONTE: grava no Cache Storage (principal)
-          await writeInstallCodeToCache(newCode);
+          // PONTE: grava também no IndexedDB (principal no iOS)
+await writeInstallCodeToIDB(newCode);
 
-          // Fallbacks leves
+// Mantém Cache como fallback
+await writeInstallCodeToCache(newCode);
+
+// Fallbacks leves ...
+
           try { setCookie(COOKIE_KEY, newCode, 30); } catch {}
           try { localStorage.setItem(STORAGE_KEY, newCode); } catch {}
 
@@ -284,12 +345,15 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
       if (installed && !existingCode && !exchangingRef.current) {
         try {
           setStatus('Verificando dados de ativação…');
-          // Ordem: CacheStorage (principal) -> cookie -> localStorage
-          const fromCache = await readAndConsumeInstallCodeFromCache();
-          const candidate =
-            fromCache ||
-            (() => { try { return getCookie(COOKIE_KEY); } catch { return null; } })() ||
-            (() => { try { return localStorage.getItem(STORAGE_KEY) || null; } catch { return null; } })();
+          // Ordem: IndexedDB (principal) -> CacheStorage (fallback) -> cookie -> localStorage
+const fromIDB = await readInstallCodeFromIDB();              // não consome
+const fromCache = await readAndConsumeInstallCodeFromCache(); // fallback
+const candidate =
+  fromIDB ||
+  fromCache ||
+  (() => { try { return getCookie(COOKIE_KEY); } catch { return null; } })() ||
+  (() => { try { return localStorage.getItem(STORAGE_KEY) || null; } catch { return null; } })();
+
 
           if (candidate) {
             exchangingRef.current = true;
