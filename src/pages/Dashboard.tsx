@@ -9,7 +9,7 @@ import {
   ChevronRight 
 } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useOneSignal } from '@/hooks/useOneSignal';
 import { toast } from '@/hooks/use-toast';
 
@@ -32,6 +32,10 @@ const Dashboard = () => {
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const isIOS = /iPad|iPhone|iPod/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
   const isAndroid = /Android/.test(ua);
+
+  // Estados auxiliares estáveis
+  const hasEverEnabled = useRef(false);
+  const unstableDisabledCount = useRef(0);
 
   const computeEnabled = async () => {
     try {
@@ -91,19 +95,38 @@ const Dashboard = () => {
         const OS = getOS();
         const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
         if (!granted) {
+          unstableDisabledCount.current = 0;
+          hasEverEnabled.current = false;
           setIsPushEnabled(false);
           return;
         }
         if (!oneSignalReady) {
-          // SDK ainda carregando: mantenha o estado atual para evitar flicker
+          // SDK ainda carregando: não altere o estado para evitar falso negativo
           return;
         }
         const opted = !!OS?.User?.PushSubscription?.optedIn;
         const id = OS?.User?.PushSubscription?.id || (await OS?.User?.PushSubscription?.getIdAsync?.());
         const enabled = Boolean(opted && id);
-        setIsPushEnabled(enabled);
+        if (enabled) {
+          hasEverEnabled.current = true;
+          unstableDisabledCount.current = 0;
+          setIsPushEnabled(true);
+          return;
+        }
+        // Não habilitado neste instante
+        if (hasEverEnabled.current) {
+          // Requer algumas leituras consecutivas para considerar realmente desligado
+          unstableDisabledCount.current += 1;
+          if (unstableDisabledCount.current >= 5) {
+            setIsPushEnabled(false);
+            hasEverEnabled.current = false;
+          }
+        } else {
+          // Nunca habilitou ainda: mantenha como está (normalmente false)
+          setIsPushEnabled(false);
+        }
       } catch (e) {
-        // Ignora erros transitórios para evitar mudanças visuais desnecessárias
+        // Ignore erros transitórios
       }
     };
 
@@ -140,7 +163,7 @@ const Dashboard = () => {
     document.addEventListener('visibilitychange', onFocusOrVisibility);
 
     // Low-frequency polling as a safety net
-    intervalId = setInterval(() => { void compute(); }, 10000);
+    intervalId = setInterval(() => { void compute(); }, 5000);
 
     return () => {
       try {
@@ -185,6 +208,8 @@ const handleNotificationPermission = async () => {
 
     if (enabled && subscriptionId) {
       setIsPushEnabled(true);
+      hasEverEnabled.current = true;
+      unstableDisabledCount.current = 0;
       dismissNotificationBanner();
       setChecking(false);
       setActivating(false);
@@ -216,6 +241,8 @@ const verifyAfterSettings = async () => {
     const enabled = await waitForEnabled();
     setIsPushEnabled(enabled);
     if (enabled) {
+      hasEverEnabled.current = true;
+      unstableDisabledCount.current = 0;
       dismissNotificationBanner();
       setReauthDialogOpen(false);
     } else {
