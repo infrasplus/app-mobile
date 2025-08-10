@@ -140,6 +140,16 @@ const Setup: React.FC = () => {
     // Conclui o login no Supabase
     const { error: vErr } = await supabase.auth.verifyOtp({ email, token, type: 'magiclink' });
     if (vErr) throw vErr;
+
+    // Aguarda a sessão persistir localmente antes de seguir
+    try {
+      for (let i = 0; i < 40; i++) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } catch {}
+
   };
 
   useEffect(() => {

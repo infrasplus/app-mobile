@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  authInitialized: boolean;
   clinicName: string;
   whatsappConnected: boolean;
   showNotificationBanner: boolean;
@@ -25,8 +26,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
   const [clinicName, setClinicName] = useState<string>('');
+  const [authInitialized, setAuthInitialized] = useState(false);
   const whatsappConnected = Math.random() > 0.5; // Simula conexão aleatória
-
   useEffect(() => {
     // Banner persisted setting
     const savedBanner = localStorage.getItem('secretaria-plus-banner');
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         setClinicName('');
       }
+      setAuthInitialized(true);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -55,6 +57,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const formatted = String(raw).replace(/[._-]/g, ' ').trim();
         setClinicName(formatted);
       }
+      setAuthInitialized(true);
     });
 
     return () => {
@@ -82,6 +85,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         isAuthenticated,
+        authInitialized,
         clinicName,
         whatsappConnected,
         showNotificationBanner,

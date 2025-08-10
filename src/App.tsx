@@ -11,6 +11,7 @@ import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
 import ApiGenerateLink from "./pages/ApiGenerateLink";
 import Setup from "./pages/Setup";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
@@ -28,9 +29,21 @@ const UnauthScreen = () => (
   </div>
 );
 
+const LoadingScreen = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center p-6">
+    <main className="max-w-md text-center space-y-4">
+      <div className="flex items-center justify-center gap-3 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span>Carregando…</span>
+      </div>
+    </main>
+  </div>
+);
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authInitialized } = useAuth();
   const location = useLocation();
+  if (!authInitialized) return <LoadingScreen />;
   if (isAuthenticated) return <>{children}</>;
   return <Navigate to={`/setup${location.search}`} replace />;
 };
