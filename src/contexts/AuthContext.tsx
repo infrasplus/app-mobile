@@ -24,10 +24,12 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // LOVABLE PREVIEW MODE: Auto-auth em desenvolvimento
+  const isDevelopment = import.meta.env.DEV;
+  const [isAuthenticated, setIsAuthenticated] = useState(isDevelopment);
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
-  const [clinicName, setClinicName] = useState<string>('');
-  const [authInitialized, setAuthInitialized] = useState(false);
+  const [clinicName, setClinicName] = useState<string>(isDevelopment ? 'Clínica Demo' : '');
+  const [authInitialized, setAuthInitialized] = useState(isDevelopment);
   const whatsappConnected = Math.random() > 0.5; // Simula conexão aleatória
   useEffect(() => {
     // Banner persisted setting

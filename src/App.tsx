@@ -40,9 +40,18 @@ const LoadingScreen = () => (
   </div>
 );
 
+// Modo de visualização para Lovable - bypass auth em desenvolvimento
+const isDevelopment = import.meta.env.DEV;
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, authInitialized } = useAuth();
   const location = useLocation();
+  
+  // LOVABLE PREVIEW MODE: Bypass auth em desenvolvimento
+  if (isDevelopment && location.pathname !== '/setup') {
+    return <>{children}</>;
+  }
+  
   if (!authInitialized) return <LoadingScreen />;
   if (isAuthenticated) return <>{children}</>;
   return <Navigate to={`/setup${location.search}`} replace />;
