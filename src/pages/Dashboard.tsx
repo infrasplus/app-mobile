@@ -153,15 +153,13 @@ const handleNotificationPermission = async () => {
           </CardContent>
         </Card>
 
-{/* Debug Only (desativado no UI Preview) */}
-{!IS_UI_PREVIEW && (
-  <>
-    {/* Debug OneSignal: botão/link oficial fora do banner */}
-    <OneSignalDebug />
-    {/* Teste de envio de notificação */}
-    <TestNotificationSender />
-  </>
-)}
+{/* Debug & Ferramentas */}
+<>
+  {/* Debug OneSignal: botão/link oficial */}
+  <OneSignalDebug />
+  {/* Teste de envio de notificação */}
+  <TestNotificationSender />
+</>
       </div>
 
       <BottomNav />

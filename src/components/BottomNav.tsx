@@ -7,9 +7,7 @@ export const BottomNav = () => {
     new URLSearchParams(window.location.search).has('uiPreview')
   );
 
-  if (IS_UI_PREVIEW) {
-    return null; // Não renderiza nada em modo preview
-  }
+  // Em UI Preview queremos ver a navegação para manter fidelidade visual
 
   const location = useLocation();
   const navigate = useNavigate();
