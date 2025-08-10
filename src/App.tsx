@@ -44,6 +44,7 @@ const App = () => (
             {/* Página pública para preparar instalação e ativar login pós-instalação */}
             <Route path="/setup" element={<Setup />} />
 
+            <Route path="/ui-preview" element={<Dashboard />} />
             <Route path="/api/generate-link" element={<ApiGenerateLink />} />
             <Route 
               path="/" 
