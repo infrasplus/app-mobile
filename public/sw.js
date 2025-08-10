@@ -35,7 +35,8 @@ self.addEventListener('activate', (event) => {
           .filter((cacheName) => 
             cacheName !== CACHE_NAME &&
             cacheName !== 'auth-backup-v1' &&
-            cacheName !== 'install-bridge'
+            cacheName !== 'install-bridge' &&
+            cacheName !== 'sp-auth-cache-v1'
           )
           .map((cacheName) => {
             console.log('[SW] Removendo cache antigo:', cacheName);
@@ -86,16 +87,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Para recursos estáticos, usa cache-first
-  if (request.destination === 'image' || 
-      request.destination === 'script' || 
-      request.destination === 'style' ||
-      request.destination === 'font') {
+  // Para recursos estáticos
+  if (request.destination === 'image' || request.destination === 'font') {
+    // Imagens e fontes: cache-first
     event.respondWith(
       caches.match(request).then((cached) => {
-        if (cached) {
-          return cached;
-        }
+        if (cached) return cached;
         return fetch(request).then((response) => {
           if (response.ok) {
             const responseClone = response.clone();
@@ -104,11 +101,25 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return response;
-        }).catch(() => {
-          console.log('[SW] Recurso não disponível:', request.url);
-          return new Response('', { status: 404 });
+        }).catch(() => new Response('', { status: 404 }));
+      })
+    );
+    return;
+  }
+  // Scripts e CSS: cache-first (arquivos são versionados pelo Vite com hash)
+  if (request.destination === 'script' || request.destination === 'style') {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
         });
       })
     );
+    return;
   }
 });

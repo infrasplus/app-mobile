@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { readAuthBackup, persistAuthBackup, clearAuthBackup } from '@/lib/auth-persist';
+import { persistentStorage } from '@/lib/persistent-auth';
 
 interface AuthContextType {
   isAuthenticated: boolean;
