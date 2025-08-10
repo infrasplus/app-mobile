@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useOneSignal } from '@/hooks/useOneSignal';
 import { persistAuthBackup } from '@/lib/auth-persist';
 import appleShareIcon from '@/assets/apple-share-icon.png';
+import iphoneTutorial from '@/assets/iphone-tutorial.webp';
 
 /**
  * Fluxo:
@@ -299,7 +300,7 @@ const Setup: React.FC = () => {
                 </h1>
                 {!installed ? (
                   isSafariIOS ? (
-                    <div className="text-sm text-muted-foreground space-y-3">
+                    <div className="text-sm text-muted-foreground space-y-3 mt-3">
                       <p className="font-medium text-amber-600">
                         ⚠️ Importante: Para continuar, adicione esta página à tela de início do iPhone.
                       </p>
@@ -309,7 +310,7 @@ const Setup: React.FC = () => {
                           <img 
                             src={appleShareIcon} 
                             alt="Ícone de compartilhar" 
-                            className="inline-block w-4 h-4 mx-1"
+                            className="inline-block w-4 h-4 object-contain mx-1"
                           />
                           {' '}na barra de menus.
                         </p>
@@ -337,6 +338,19 @@ const Setup: React.FC = () => {
                 )}
               </div>
             </div>
+            
+            {!installed && isSafariIOS && (
+              <div className="mt-4 space-y-3">
+                <img 
+                  src={iphoneTutorial} 
+                  alt="Tutorial de instalação no iPhone" 
+                  className="w-full rounded-lg border"
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Após adicionar, abra o app pelo atalho na tela inicial (não use mais o Safari).
+                </p>
+              </div>
+            )}
           </>
         ) : (
           <div>
