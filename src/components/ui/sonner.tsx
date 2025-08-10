@@ -5,13 +5,6 @@ type ToasterProps = React.ComponentProps<typeof Sonner>
 const Toaster = ({ ...props }: ToasterProps) => {
   const theme: ToasterProps["theme"] = "system"
 
-  const isUIPreview = typeof window !== 'undefined' && (
-    window.location.pathname.startsWith('/ui-preview') ||
-    new URLSearchParams(window.location.search).has('uiPreview')
-  );
-
-  if (isUIPreview) return null;
-
   return (
     <Sonner
       theme={theme}

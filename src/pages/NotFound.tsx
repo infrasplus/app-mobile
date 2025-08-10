@@ -1,15 +1,15 @@
+import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
 const NotFound = () => {
-  // Evita dependência do React Router para não quebrar em contextos sem Router
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const location = useLocation();
 
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",
-      pathname
+      location.pathname
     );
-  }, [pathname]);
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
