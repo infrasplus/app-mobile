@@ -22,6 +22,30 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // UI Preview Mode: evita uso de hooks para não conflitar com o ambiente do Lovable
+  const IS_UI_PREVIEW = typeof window !== 'undefined' && (
+    window.location.pathname.startsWith('/ui-preview') ||
+    new URLSearchParams(window.location.search).has('uiPreview')
+  );
+
+  if (IS_UI_PREVIEW) {
+    const previewValue: AuthContextType = {
+      isAuthenticated: true,
+      clinicName: 'Clínica (Preview)',
+      whatsappConnected: false,
+      showNotificationBanner: true,
+      login: () => false,
+      logout: () => {},
+      dismissNotificationBanner: () => {},
+    };
+
+    return (
+      <AuthContext.Provider value={previewValue}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
   const [clinicName, setClinicName] = useState<string>('');
