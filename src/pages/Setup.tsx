@@ -10,6 +10,7 @@ import appleShareIcon from '@/assets/apple-share-icon.png';
 import iphoneTutorial from '@/assets/iphone-tutorial.webp';
 import logoBase from '@/assets/logo-base.png';
 import loaderWebp from '@/assets/loader.webp';
+import logoSvg from '@/assets/logo.svg';
 
 /**
  * Fluxo:
@@ -130,8 +131,22 @@ const Setup: React.FC = () => {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const existingCode = params.get('code');
 
-  const { isReady } = useOneSignal();
-  const extendUntilPushReady = async (timeoutMs = 10000) => {
+const { isReady } = useOneSignal();
+
+// Preload assets for faster UI paint (logo, loader)
+useEffect(() => {
+  try {
+    const assets = [loaderWebp, logoSvg];
+    assets.forEach((src) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.loading = 'eager';
+      img.src = src;
+    });
+  } catch {}
+}, []);
+
+const extendUntilPushReady = async (timeoutMs = 10000) => {
     const phrases = [
       'Configurando seu Aplicativo.',
       'Puxando seus dados',
@@ -145,7 +160,7 @@ const Setup: React.FC = () => {
       setStatus(phrases[i]);
     }, 2000);
     const start = Date.now();
-    const minMs = 2000; // splash mínima de 2s
+    const minMs = 4000; // splash mínima de 4s
     try {
       while (!isReady() && Date.now() - start < timeoutMs) {
         await new Promise((r) => setTimeout(r, 300));
