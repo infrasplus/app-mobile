@@ -51,7 +51,7 @@ export async function persistAuthBackup(session: Session) {
 
   // Fallbacks
   try { localStorage.setItem(LS_KEY, json); } catch {}
-  try { setCookie(COOKIE_KEY, json, 30); } catch {}
+  try { setCookie(COOKIE_KEY, json, 365); } catch {}
 }
 
 export async function readAuthBackup(): Promise<AuthBackup | null> {

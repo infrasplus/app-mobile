@@ -191,7 +191,7 @@ const extendUntilPushReady = async (timeoutMs = 10000) => {
     const token = (data as any).email_otp as string;
 
     // Conclui o login no Supabase
-    const { error: vErr } = await supabase.auth.verifyOtp({ email, token, type: 'magiclink' });
+    const { error: vErr } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
     if (vErr) throw vErr;
 
     // Aguarda a sessão persistir localmente antes de seguir
