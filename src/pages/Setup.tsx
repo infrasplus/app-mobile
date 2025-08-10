@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useOneSignal } from '@/hooks/useOneSignal';
 import { persistAuthBackup } from '@/lib/auth-persist';
+import appleShareIcon from '@/assets/apple-share-icon.png';
 
 /**
  * Fluxo:
@@ -87,9 +88,25 @@ function useIsInstalled() {
   return installed;
 }
 
+/** Detectar se está no Safari/iOS */
+function useIsSafariIOS() {
+  const [isSafariIOS, setIsSafariIOS] = useState(false);
+  useEffect(() => {
+    const checkSafariIOS = () => {
+      const ua = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(ua);
+      const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
+      return isIOS && isSafari;
+    };
+    setIsSafariIOS(checkSafariIOS());
+  }, []);
+  return isSafariIOS;
+}
+
 const Setup: React.FC = () => {
   const navigate = useNavigate();
   const installed = useIsInstalled();
+  const isSafariIOS = useIsSafariIOS();
   const [status, setStatus] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [code, setCode] = useState<string | null>(null);
@@ -278,12 +295,33 @@ const Setup: React.FC = () => {
               )}
               <div className="flex-1">
                 <h1 className="text-lg font-semibold">
-                  {installed ? 'Ativando acesso…' : 'Instalar SecretáriaPlus'}
+                  {installed ? 'Ativando acesso…' : 'Adicione o app à Tela de Início'}
                 </h1>
                 {!installed ? (
-                  <p className="text-sm text-muted-foreground">
-                    Toque em <b>Compartilhar</b> no Safari e depois <b>Adicionar à Tela de Início</b>. Ao abrir pelo atalho, o acesso será ativado automaticamente.
-                  </p>
+                  isSafariIOS ? (
+                    <div className="text-sm text-muted-foreground space-y-3">
+                      <p className="font-medium text-amber-600">
+                        ⚠️ Importante: Para continuar, adicione esta página à tela de início do iPhone.
+                      </p>
+                      <div className="space-y-2">
+                        <p className="flex items-center gap-1">
+                          1. Toque em{' '}
+                          <img 
+                            src={appleShareIcon} 
+                            alt="Ícone de compartilhar" 
+                            className="inline-block w-4 h-4 mx-1"
+                          />
+                          {' '}na barra de menus.
+                        </p>
+                        <p>2. Role para baixo a lista de opções e toque em "Adicionar à Tela de Início".</p>
+                        <p>3. Então, toque em "Adicionar" no canto superior direito</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Toque em <b>Compartilhar</b> no Safari e depois <b>Adicionar à Tela de Início</b>. Ao abrir pelo atalho, o acesso será ativado automaticamente.
+                    </p>
+                  )
                 ) : (
                   <div className="text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
