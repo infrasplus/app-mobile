@@ -2,22 +2,36 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
+  // Ajustamos os headers para incluir x-install-token
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-install-token',
 };
 
 // Utilitário simples
-function jsonResponse(body: any, status = 200) {
+function jsonResponse(body: any, status = 200, headers?: HeadersInit) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    headers: { 'Content-Type': 'application/json', ...(headers || corsHeaders) },
   });
 }
 
 Deno.serve(async (req) => {
+  // CORS dinâmico com base na origem
+  const origin = req.headers.get('origin') || '';
+  const allowedOrigins = new Set<string>([
+    'https://savvy-clinic-connect.lovable.app',
+    'http://localhost:5173',
+    'http://localhost:4173',
+  ]);
+  const dynCorsHeaders: Record<string, string> = {
+    'Access-Control-Allow-Origin': allowedOrigins.has(origin) ? origin : '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-install-token',
+    'Vary': 'Origin',
+  };
+
   // CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: dynCorsHeaders });
   }
 
   try {
@@ -28,12 +42,9 @@ Deno.serve(async (req) => {
     const name = url.searchParams.get('name') || undefined;
     const wh_id = url.searchParams.get('wh_id') || undefined;
     const inst = url.searchParams.get('inst') || undefined;
+
+    // redirect_to validado por whitelist
     const rawRedirectTo = url.searchParams.get('redirect_to');
-    const allowedOrigins = new Set<string>([
-      'https://savvy-clinic-connect.lovable.app',
-      'http://localhost:5173',
-      'http://localhost:4173',
-    ]);
     let redirectTo: string | undefined = undefined;
     if (rawRedirectTo) {
       try {
@@ -43,6 +54,7 @@ Deno.serve(async (req) => {
         }
       } catch {}
     }
+
     const mode = url.searchParams.get('mode') || 'redirect'; // 'redirect' | 'json'
     // Novos parâmetros para o fluxo de instalação
     const flow = url.searchParams.get('flow'); // 'create-install' | 'exchange-install'
@@ -52,7 +64,20 @@ Deno.serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!SUPABASE_URL || !SERVICE_ROLE) {
-      return jsonResponse({ error: 'Servidor sem configuração do Supabase' }, 500);
+      return jsonResponse({ error: 'Servidor sem configuração do Supabase' }, 500, dynCorsHeaders);
+    }
+
+    // Exigir token para create-install quando a origem não for whitelist
+    if (flow === 'create-install' && !allowedOrigins.has(origin)) {
+      const REQUIRED_TOKEN = Deno.env.get('INSTALL_API_TOKEN') || '';
+      const providedToken =
+        req.headers.get('x-install-token') ||
+        req.headers.get('X-Install-Token') ||
+        ''; // compatibilidade
+
+      if (!REQUIRED_TOKEN || providedToken !== REQUIRED_TOKEN) {
+        return jsonResponse({ error: 'Unauthorized' }, 401, dynCorsHeaders);
+      }
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -62,10 +87,9 @@ Deno.serve(async (req) => {
     // 1) Fluxo para criar o código de instalação
     if (flow === 'create-install') {
       if (!email) {
-        return jsonResponse({ error: 'email é obrigatório' }, 400);
+        return jsonResponse({ error: 'email é obrigatório' }, 400, dynCorsHeaders);
       }
 
-      // Garante que o usuário exista e obtemos seu id
       const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
         type: 'magiclink',
         email,
@@ -73,8 +97,8 @@ Deno.serve(async (req) => {
       });
 
       if (linkError || !linkData?.user) {
-        console.error('generateLink error (create-install)', linkError);
-        return jsonResponse({ error: linkError?.message || 'Falha ao preparar usuário' }, 500);
+        console.error('generateLink error (create-install)'); // evitando logar dados sensíveis
+        return jsonResponse({ error: linkError?.message || 'Falha ao preparar usuário' }, 500, dynCorsHeaders);
       }
 
       const user = linkData.user;
@@ -91,7 +115,7 @@ Deno.serve(async (req) => {
 
       const { error: upsertError } = await admin.from('users').upsert(upsertPayload, { onConflict: 'id' });
       if (upsertError) {
-        console.error('users upsert error (create-install)', upsertError);
+        console.error('users upsert error (create-install)'); // sem dados sensíveis
       }
 
       // Cria registro do código de instalação (one-time)
@@ -115,18 +139,18 @@ Deno.serve(async (req) => {
         });
 
       if (insertError) {
-        console.error('auth_install_codes insert error', insertError);
-        return jsonResponse({ error: 'Falha ao gerar código de instalação' }, 500);
+        console.error('auth_install_codes insert error'); // sem dados sensíveis
+        return jsonResponse({ error: 'Falha ao gerar código de instalação' }, 500, dynCorsHeaders);
       }
 
       // Retorna o code para o cliente fixar na URL antes de instalar
-      return jsonResponse({ ok: true, code: codeToUse, email });
+      return jsonResponse({ ok: true, code: codeToUse, email }, 200, dynCorsHeaders);
     }
 
     // 2) Fluxo para trocar o código por um email_otp (para login direto no PWA)
     if (flow === 'exchange-install') {
       if (!code) {
-        return jsonResponse({ error: 'code é obrigatório' }, 400);
+        return jsonResponse({ error: 'code é obrigatório' }, 400, dynCorsHeaders);
       }
 
       // Busca o registro do código
@@ -137,19 +161,19 @@ Deno.serve(async (req) => {
         .limit(1);
 
       if (codeErr) {
-        console.error('select auth_install_codes error', codeErr);
-        return jsonResponse({ error: 'Erro ao validar código' }, 500);
+        console.error('select auth_install_codes error');
+        return jsonResponse({ error: 'Erro ao validar código' }, 500, dynCorsHeaders);
       }
 
       const row = rows?.[0];
       if (!row) {
-        return jsonResponse({ error: 'Código inválido' }, 400);
+        return jsonResponse({ error: 'Código inválido' }, 400, dynCorsHeaders);
       }
       if (row.used_at) {
-        return jsonResponse({ error: 'Código já utilizado' }, 400);
+        return jsonResponse({ error: 'Código já utilizado' }, 400, dynCorsHeaders);
       }
       if (row.expires_at && new Date(row.expires_at) <= new Date()) {
-        return jsonResponse({ error: 'Código expirado' }, 400);
+        return jsonResponse({ error: 'Código expirado' }, 400, dynCorsHeaders);
       }
 
       // Gera um novo magic link e usa o email_otp retornado para login direto
@@ -161,8 +185,8 @@ Deno.serve(async (req) => {
 
       const emailOtp = (linkData2?.properties as any)?.email_otp as string | undefined;
       if (linkError2 || !linkData2?.user || !emailOtp) {
-        console.error('generateLink error (exchange-install)', linkError2, 'email_otp:', !!emailOtp);
-        return jsonResponse({ error: linkError2?.message || 'Falha ao gerar OTP' }, 500);
+        console.error('generateLink error (exchange-install)'); // sem dados sensíveis
+        return jsonResponse({ error: linkError2?.message || 'Falha ao gerar OTP' }, 500, dynCorsHeaders);
       }
 
       // Marca o código como utilizado
@@ -172,7 +196,7 @@ Deno.serve(async (req) => {
         .eq('code', code);
 
       if (usedErr) {
-        console.error('auth_install_codes update used_at error', usedErr);
+        console.error('auth_install_codes update used_at error'); // sem dados sensíveis
         // Ainda retornamos o OTP, mas logamos o erro
       }
 
@@ -180,12 +204,12 @@ Deno.serve(async (req) => {
         ok: true,
         email: row.email,
         email_otp: emailOtp,
-      });
+      }, 200, dynCorsHeaders);
     }
 
     // 3) Comportamento original (mantido): gerar link e redirecionar ou retornar JSON
     if (!email) {
-      return jsonResponse({ error: 'email é obrigatório' }, 400);
+      return jsonResponse({ error: 'email é obrigatório' }, 400, dynCorsHeaders);
     }
 
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
@@ -196,8 +220,8 @@ Deno.serve(async (req) => {
 
     const actionLink = linkData?.properties?.action_link as string | undefined;
     if (linkError || !linkData?.user || !actionLink) {
-      console.error('generateLink error', linkError);
-      return jsonResponse({ error: linkError?.message || 'Falha ao gerar magic link' }, 500);
+      console.error('generateLink error'); // sem dados sensíveis
+      return jsonResponse({ error: linkError?.message || 'Falha ao gerar magic link' }, 500, dynCorsHeaders);
     }
 
     const user = linkData.user;
@@ -212,7 +236,7 @@ Deno.serve(async (req) => {
 
     const { error: upsertError } = await admin.from('users').upsert(upsertPayload, { onConflict: 'id' });
     if (upsertError) {
-      console.error('users upsert error', upsertError);
+      console.error('users upsert error'); // sem dados sensíveis
     }
 
     if (mode === 'json') {
@@ -222,15 +246,15 @@ Deno.serve(async (req) => {
         user_id: user.id,
         action_link: actionLink,
         created: !!user?.created_at,
-      });
+      }, 200, dynCorsHeaders);
     }
 
     return new Response(null, {
       status: 302,
-      headers: { Location: actionLink, ...corsHeaders },
+      headers: { Location: actionLink, ...dynCorsHeaders },
     });
   } catch (e) {
-    console.error('Unhandled error', e);
-    return jsonResponse({ error: 'Erro inesperado' }, 500);
+    console.error('Unhandled error'); // sem dados sensíveis
+    return jsonResponse({ error: 'Erro inesperado' }, 500, dynCorsHeaders);
   }
 });
