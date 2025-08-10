@@ -20,14 +20,16 @@ const Dashboard = () => {
   const { enablePush, isReady } = useOneSignal();
 
   const [oneSignalReady, setOneSignalReady] = useState(false);
-  const [isPushEnabled, setIsPushEnabled] = useState<boolean>(typeof Notification !== 'undefined' ? Notification.permission === 'granted' : false);
+  const [isPushEnabled, setIsPushEnabled] = useState<boolean>(() => {
+    try { return sessionStorage.getItem('push_enabled') === '1'; } catch { return typeof Notification !== 'undefined' ? Notification.permission === 'granted' : false; }
+  });
 
 
   // Dialog para reativação quando o sistema bloqueia notificações
   const [reauthDialogOpen, setReauthDialogOpen] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [activating, setActivating] = useState(false);
-  const [checking, setChecking] = useState(false);
+  const [checking, setChecking] = useState(() => { try { return sessionStorage.getItem('push_checking') === '1'; } catch { return false; } });
   // Detecção básica de plataforma
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const isIOS = /iPad|iPhone|iPod/.test(ua) || ((navigator as any)?.platform === 'MacIntel' && (navigator as any)?.maxTouchPoints > 1);
@@ -91,13 +93,36 @@ const Dashboard = () => {
       try {
         const OS = getOS();
         const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+        if (!granted) {
+          setIsPushEnabled(false);
+          setChecking(false);
+          try {
+            sessionStorage.removeItem('push_checking');
+            sessionStorage.removeItem('push_enabled');
+          } catch {}
+          return;
+        }
+        if (!oneSignalReady) {
+          // Permissão concedida mas SDK ainda não pronto: evita falso negativo
+          setChecking(true);
+          try { sessionStorage.setItem('push_checking', '1'); } catch {}
+          return;
+        }
         const opted = !!OS?.User?.PushSubscription?.optedIn;
         const id = OS?.User?.PushSubscription?.id || (await OS?.User?.PushSubscription?.getIdAsync?.());
-        const enabled = Boolean(granted && opted && id);
+        const enabled = Boolean(opted && id);
         setIsPushEnabled(enabled);
+        setChecking(false);
+        try {
+          if (enabled) {
+            sessionStorage.setItem('push_enabled', '1');
+          } else {
+            sessionStorage.removeItem('push_enabled');
+          }
+          sessionStorage.removeItem('push_checking');
+        } catch {}
       } catch (e) {
-        // In doubt, be conservative and assume disabled
-        setIsPushEnabled(false);
+        // Em erros transitórios, não force estado para falso para evitar flicker
       }
     };
 

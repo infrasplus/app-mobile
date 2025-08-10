@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { readAuthBackup, persistAuthBackup, clearAuthBackup } from '@/lib/auth-persist';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -47,7 +48,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setClinicName('');
       }
       setAuthInitialized(true);
+      // Persist backup of tokens after auth changes (defer to avoid deadlocks)
+      setTimeout(async () => {
+        try {
+          const { data: { session: s } } = await supabase.auth.getSession();
+          if (s) await persistAuthBackup(s);
+        } catch {}
+      }, 0);
     });
+
+    // Attempt to restore session from backup if none is present (especially for iOS PWA)
+    setTimeout(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          const backup = await readAuthBackup();
+          if (backup?.access_token && backup?.refresh_token) {
+            await supabase.auth.setSession({ access_token: backup.access_token, refresh_token: backup.refresh_token });
+          }
+        }
+      } catch (e) {
+        console.warn('Auth restore failed', e);
+      }
+    }, 0);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
@@ -56,8 +79,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const raw = user.user_metadata?.name || user.user_metadata?.full_name || user.email || 'Usuário';
         const formatted = String(raw).replace(/[._-]/g, ' ').trim();
         setClinicName(formatted);
+        setAuthInitialized(true);
       }
-      setAuthInitialized(true);
     });
 
     return () => {
@@ -74,6 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = () => {
     supabase.auth.signOut();
     setIsAuthenticated(false);
+    clearAuthBackup();
   };
 
   const dismissNotificationBanner = () => {

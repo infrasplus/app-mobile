@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useOneSignal } from '@/hooks/useOneSignal';
+import { persistAuthBackup } from '@/lib/auth-persist';
 
 /**
  * Fluxo:
@@ -148,6 +149,12 @@ const Setup: React.FC = () => {
         if (session) break;
         await new Promise((r) => setTimeout(r, 100));
       }
+    } catch {}
+
+    // Backup dos tokens para resiliência em iOS PWA
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) await persistAuthBackup(session);
     } catch {}
 
   };
