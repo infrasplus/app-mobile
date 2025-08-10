@@ -1,11 +1,56 @@
 import React from 'react';
 import { MockAuthProvider, useMockAuth } from '@/contexts/MockAuthContext';
-import { Header } from '@/components/Header';
-import { BottomNav } from '@/components/BottomNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ExternalLink, ChevronRight, Home, Bell, Settings } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import logo from '@/assets/logo.svg';
+
+// Header simplificado para preview
+const PreviewHeader = () => (
+  <header className="bg-background border-b border-border p-4 flex items-center justify-between">
+    <img src={logo} alt="SecretáriaPlus — Central de notificações" className="h-7 md:h-8" />
+    <span className="text-xs md:text-sm text-muted-foreground">Clínica Demo</span>
+  </header>
+);
+
+// BottomNav simplificado para preview
+const PreviewBottomNav = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const navItems = [
+    { icon: Home, label: 'Home', path: '/preview' },
+    { icon: Bell, label: 'Notificações', path: '/preview' },
+    { icon: Settings, label: 'Ajustes', path: '/preview' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-[env(safe-area-inset-bottom)]">
+      <div className="grid grid-cols-3 min-h-16 pt-2.5 pb-10">
+        {navItems.map(({ icon: Icon, label, path }) => {
+          const isActive = location.pathname === path;
+
+          return (
+            <button
+              key={path}
+              onClick={() => navigate(path)}
+              className={`w-full h-full flex flex-col items-center justify-center gap-1.5 transition-colors ${
+                isActive
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:bg-muted/50'
+              }`}
+              aria-pressed={isActive}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="text-[10px] font-medium">{label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};
 
 // Mock do hook useOneSignal para preview
 const useMockOneSignal = () => ({
@@ -23,7 +68,7 @@ const SimpleDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <PreviewHeader />
       <main className="container mx-auto p-4 pb-20">
         {/* Banner de notificações */}
         {showNotificationBanner && !isPushEnabled && (
@@ -128,7 +173,7 @@ const SimpleDashboard = () => {
           </Card>
         </div>
       </main>
-      <BottomNav />
+      <PreviewBottomNav />
     </div>
   );
 };
