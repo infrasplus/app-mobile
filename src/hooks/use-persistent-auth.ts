@@ -1,231 +1,382 @@
-// src/lib/persistent-auth.ts
-// Sistema de autenticação ETERNA e MULTI-DEVICE para PWA
+// src/hooks/use-persistent-auth.ts
+// Hook para autenticação ETERNA e MULTI-DEVICE
 
-import { openDB, IDBPDatabase } from 'idb';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { persistentStorage, DeviceInfo } from '@/lib/persistent-auth';
+import { toast } from 'sonner';
 
-// Info básica do device (só para log, não bloqueia)
-export class DeviceInfo {
-  static get() {
-    return {
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-      language: navigator.language,
-      screen: `${screen.width}x${screen.height}`,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      timestamp: new Date().toISOString(),
-      isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
-      isAndroid: /Android/.test(navigator.userAgent),
-      isPWA: window.matchMedia('(display-mode: standalone)').matches,
-      isMobile: /Mobile|Android|iPhone/i.test(navigator.userAgent),
-    };
-  }
+interface AuthState {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  user: any | null;
+  code: string | null;
+  error: string | null;
 }
 
-// Sistema de Multi-Storage otimizado para iOS e Android
-export class PersistentStorage {
-  private static DB_NAME = 'sp_auth_db';
-  private static DB_VERSION = 1;
-  private static STORE_NAME = 'auth_store';
-  private static CACHE_NAME = 'sp-auth-cache-v1';
-  private db: IDBPDatabase | null = null;
+export function usePersistentAuth() {
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    isLoading: true,
+    user: null,
+    code: null,
+    error: null,
+  });
   
-  // Chaves de armazenamento
-  private static KEYS = {
-    AUTH_CODE: 'sp_auth_code',
-    SESSION: 'sp_session',
-    USER_DATA: 'sp_user_data',
-    LAST_SYNC: 'sp_last_sync',
-  };
+  const initRef = useRef(false);
+  const retryCount = useRef(0);
+  const MAX_RETRIES = 3;
   
-  async init() {
+  // Inicializar
+  const initPersistence = useCallback(async () => {
+    if (initRef.current) return;
+    initRef.current = true;
+    
     try {
-      // IndexedDB (melhor para iOS PWA)
-      this.db = await openDB(PersistentStorage.DB_NAME, PersistentStorage.DB_VERSION, {
-        upgrade(db) {
-          if (!db.objectStoreNames.contains(PersistentStorage.STORE_NAME)) {
-            db.createObjectStore(PersistentStorage.STORE_NAME);
-          }
-        },
-      });
-      
-      console.log('✅ Storage inicializado');
-      
-      // Sincronizar dados entre storages
-      await this.syncStorages();
+      await persistentStorage.init();
+      console.log('✅ Sistema de persistência pronto');
     } catch (error) {
-      console.error('Erro ao inicializar storage:', error);
+      console.error('❌ Erro ao iniciar:', error);
     }
-  }
+  }, []);
   
-  // Salvar em TODOS os lugares
-  async saveEverywhere(key: string, value: any): Promise<void> {
-    const data = {
-      value,
-      timestamp: Date.now(),
-      version: '1.0',
-    };
-    
-    const serialized = JSON.stringify(data);
-    
-    // 1. IndexedDB (prioridade no iOS)
+  // Recuperar sessão
+  const recoverSession = useCallback(async () => {
     try {
-      if (this.db) {
-        await this.db.put(PersistentStorage.STORE_NAME, serialized, key);
-      }
-    } catch (e) {
-      console.warn('IndexedDB falhou:', e);
-    }
-    
-    // 2. Cache API (bom para PWA)
-    try {
-      const cache = await caches.open(PersistentStorage.CACHE_NAME);
-      const response = new Response(serialized, {
-        headers: { 'Content-Type': 'application/json' }
-      });
-      await cache.put(new Request(`/${key}`), response);
-    } catch (e) {
-      console.warn('Cache API falhou:', e);
-    }
-    
-    // 3. localStorage (funciona bem no Android)
-    try {
-      localStorage.setItem(key, serialized);
-    } catch (e) {
-      console.warn('localStorage falhou:', e);
-    }
-    
-    // 4. sessionStorage (backup rápido)
-    try {
-      sessionStorage.setItem(key, serialized);
-    } catch (e) {
-      console.warn('sessionStorage falhou:', e);
-    }
-  }
-  
-  // Recuperar de qualquer lugar
-  async getFromAnywhere(key: string): Promise<any> {
-    let data = null;
-    
-    // Ordem otimizada: iOS prefere IndexedDB, Android prefere localStorage
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const storageOrder = isIOS 
-      ? ['indexeddb', 'cache', 'local', 'session']
-      : ['local', 'indexeddb', 'cache', 'session'];
-    
-    for (const storage of storageOrder) {
-      if (data) break;
+      // 1. Verificar sessão ativa no Supabase
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       
-      switch (storage) {
-        case 'indexeddb':
-          try {
-            if (this.db) {
-              const stored = await this.db.get(PersistentStorage.STORE_NAME, key);
-              if (stored) data = JSON.parse(stored);
-            }
-          } catch (e) {}
-          break;
-          
-        case 'cache':
-          try {
-            const cache = await caches.open(PersistentStorage.CACHE_NAME);
-            const response = await cache.match(new Request(`/${key}`));
-            if (response) {
-              const text = await response.text();
-              data = JSON.parse(text);
-            }
-          } catch (e) {}
-          break;
-          
-        case 'local':
-          try {
-            const stored = localStorage.getItem(key);
-            if (stored) data = JSON.parse(stored);
-          } catch (e) {}
-          break;
-          
-        case 'session':
-          try {
-            const stored = sessionStorage.getItem(key);
-            if (stored) data = JSON.parse(stored);
-          } catch (e) {}
-          break;
+      if (currentSession?.user) {
+        console.log('✅ Sessão ativa encontrada');
+        await persistentStorage.saveSession(currentSession);
+        setAuthState({
+          isAuthenticated: true,
+          isLoading: false,
+          user: currentSession.user,
+          code: await persistentStorage.getAuthCode(),
+          error: null,
+        });
+        return true;
       }
-    }
-    
-    // Se achou, propagar para outros storages
-    if (data) {
-      await this.saveEverywhere(key, data.value);
-      return data.value;
-    }
-    
-    return null;
-  }
-  
-  // Sincronizar storages
-  async syncStorages() {
-    const keys = Object.values(PersistentStorage.KEYS);
-    
-    for (const key of keys) {
-      const value = await this.getFromAnywhere(key);
-      if (value) {
-        await this.saveEverywhere(key, value);
-      }
-    }
-    
-    await this.saveEverywhere(PersistentStorage.KEYS.LAST_SYNC, Date.now());
-  }
-  
-  // Métodos específicos
-  async saveAuthCode(code: string) {
-    await this.saveEverywhere(PersistentStorage.KEYS.AUTH_CODE, code);
-  }
-  
-  async getAuthCode(): Promise<string | null> {
-    return await this.getFromAnywhere(PersistentStorage.KEYS.AUTH_CODE);
-  }
-  
-  async saveSession(session: any) {
-    await this.saveEverywhere(PersistentStorage.KEYS.SESSION, session);
-  }
-  
-  async getSession(): Promise<any> {
-    return await this.getFromAnywhere(PersistentStorage.KEYS.SESSION);
-  }
-  
-  async saveUserData(userData: any) {
-    await this.saveEverywhere(PersistentStorage.KEYS.USER_DATA, userData);
-  }
-  
-  async getUserData(): Promise<any> {
-    return await this.getFromAnywhere(PersistentStorage.KEYS.USER_DATA);
-  }
-  
-  // Limpar tudo (logout)
-  async clearAll() {
-    const keys = Object.values(PersistentStorage.KEYS);
-    
-    // Limpar todos os storages
-    try {
-      if (this.db) {
-        for (const key of keys) {
-          await this.db.delete(PersistentStorage.STORE_NAME, key);
+      
+      // 2. Recuperar sessão salva
+      const savedSession = await persistentStorage.getSession();
+      const savedCode = await persistentStorage.getAuthCode();
+      
+      if (savedSession?.access_token && savedSession?.refresh_token) {
+        console.log('🔄 Restaurando sessão...');
+        
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: savedSession.access_token,
+            refresh_token: savedSession.refresh_token,
+          });
+          
+          if (data?.session) {
+            console.log('✅ Sessão restaurada');
+            await persistentStorage.saveSession(data.session);
+            setAuthState({
+              isAuthenticated: true,
+              isLoading: false,
+              user: data.session.user,
+              code: savedCode,
+              error: null,
+            });
+            return true;
+          }
+        } catch (e) {
+          console.warn('⚠️ Sessão expirada');
         }
       }
-    } catch (e) {}
-    
+      
+      // 3. Se tem código, re-autenticar
+      if (savedCode) {
+        console.log('🔑 Usando código eterno...');
+        const success = await silentReauth(savedCode);
+        if (success) return true;
+      }
+      
+      // 4. Verificar URL para nova instalação
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCode = urlParams.get('code');
+      
+      if (urlCode) {
+        console.log('🆕 Processando instalação...');
+        const success = await handleInstallCode(urlCode);
+        if (success) {
+          window.history.replaceState({}, '', window.location.pathname);
+          return true;
+        }
+      }
+      
+      // Não autenticado
+      setAuthState({
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        code: null,
+        error: null,
+      });
+      return false;
+      
+    } catch (error) {
+      console.error('❌ Erro:', error);
+      setAuthState({
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        code: null,
+        error: 'Erro ao recuperar sessão',
+      });
+      return false;
+    }
+  }, []);
+  
+  // Re-autenticação silenciosa
+  const silentReauth = useCallback(async (code: string): Promise<boolean> => {
     try {
-      await caches.delete(PersistentStorage.CACHE_NAME);
-    } catch (e) {}
-    
+      const deviceInfo = DeviceInfo.get();
+      
+      // Trocar código por OTP
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-link?` + 
+        new URLSearchParams({
+          flow: 'exchange-install',
+          code: code,
+          device_info: JSON.stringify(deviceInfo),
+        }),
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (!data.ok || !data.email_otp) {
+        console.error('❌ Código inválido:', data.error);
+        
+        if (retryCount.current >= MAX_RETRIES) {
+          await persistentStorage.saveAuthCode('');
+          toast.error('Código expirado. Por favor, reinstale o app.');
+        }
+        
+        return false;
+      }
+      
+      // Login com OTP
+      const { data: authData, error: authError } = await supabase.auth.verifyOtp({
+        email: data.email,
+        token: data.email_otp,
+        type: 'email',
+      });
+      
+      if (authError || !authData.session) {
+        console.error('❌ Erro no login:', authError);
+        return false;
+      }
+      
+      // Salvar tudo
+      await persistentStorage.saveSession(authData.session);
+      await persistentStorage.saveAuthCode(code);
+      await persistentStorage.saveUserData(authData.user);
+      
+      console.log('✅ Re-autenticado com sucesso!');
+      
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        user: authData.user,
+        code: code,
+        error: null,
+      });
+      
+      retryCount.current = 0;
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Erro na re-autenticação:', error);
+      retryCount.current++;
+      return false;
+    }
+  }, []);
+  
+  // Processar instalação
+  const handleInstallCode = useCallback(async (code: string): Promise<boolean> => {
     try {
-      keys.forEach(key => localStorage.removeItem(key));
-    } catch (e) {}
-    
+      const deviceInfo = DeviceInfo.get();
+      
+      // Trocar código por OTP
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-link?` + 
+        new URLSearchParams({
+          flow: 'exchange-install',
+          code: code,
+          device_info: JSON.stringify(deviceInfo),
+        }),
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (!data.ok || !data.email_otp) {
+        toast.error(data.error || 'Código inválido');
+        return false;
+      }
+      
+      // Login
+      const { data: authData, error: authError } = await supabase.auth.verifyOtp({
+        email: data.email,
+        token: data.email_otp,
+        type: 'email',
+      });
+      
+      if (authError || !authData.session) {
+        toast.error('Erro ao autenticar');
+        return false;
+      }
+      
+      // Salvar TUDO
+      await persistentStorage.saveSession(authData.session);
+      await persistentStorage.saveAuthCode(code);
+      await persistentStorage.saveUserData(authData.user);
+      
+      toast.success('✅ App instalado com sucesso!');
+      
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        user: authData.user,
+        code: code,
+        error: null,
+      });
+      
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Erro:', error);
+      toast.error('Erro ao instalar');
+      return false;
+    }
+  }, []);
+  
+  // Logout
+  const logout = useCallback(async () => {
     try {
-      keys.forEach(key => sessionStorage.removeItem(key));
-    } catch (e) {}
-  }
+      await supabase.auth.signOut();
+      await persistentStorage.clearAll();
+      
+      setAuthState({
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        code: null,
+        error: null,
+      });
+      
+      toast.success('Logout realizado');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      toast.error('Erro ao fazer logout');
+    }
+  }, []);
+  
+  // Verificar auth periodicamente
+  const checkAuth = useCallback(async () => {
+    if (!authState.isAuthenticated) return;
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.log('🔄 Sessão expirada, recuperando...');
+      const recovered = await recoverSession();
+      if (!recovered) {
+        console.log('⚠️ Não foi possível recuperar');
+      }
+    }
+  }, [authState.isAuthenticated, recoverSession]);
+  
+  // Setup
+  useEffect(() => {
+    const setup = async () => {
+      await initPersistence();
+      await recoverSession();
+    };
+    
+    setup();
+    
+    // Listener de auth
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth event:', event);
+        
+        if (event === 'SIGNED_IN' && session) {
+          await persistentStorage.saveSession(session);
+          setAuthState(prev => ({
+            ...prev,
+            isAuthenticated: true,
+            user: session.user,
+          }));
+        } else if (event === 'SIGNED_OUT') {
+          setAuthState(prev => ({
+            ...prev,
+            isAuthenticated: false,
+            user: null,
+          }));
+        } else if (event === 'TOKEN_REFRESHED' && session) {
+          await persistentStorage.saveSession(session);
+        }
+      }
+    );
+    
+    // Verificar a cada 5 minutos
+    const interval = setInterval(checkAuth, 5 * 60 * 1000);
+    
+    // Quando app volta do background
+    const handleVisibilityChange = () => {
+      if (!document.hidden && authState.isAuthenticated) {
+        checkAuth();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Sincronizar quando volta o foco
+    const handleFocus = () => {
+      persistentStorage.syncStorages();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    // Mensagem do Service Worker
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'CHECK_AUTH') {
+        checkAuth();
+      }
+    };
+    
+    navigator.serviceWorker?.addEventListener('message', handleMessage);
+    
+    return () => {
+      authListener?.subscription.unsubscribe();
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    };
+  }, []);
+  
+  return {
+    ...authState,
+    logout,
+    recoverSession,
+    checkAuth,
+  };
 }
-
-// Singleton global
-export const persistentStorage = new PersistentStorage();
