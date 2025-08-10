@@ -8,269 +8,188 @@ declare global {
   }
 }
 
-// AppId CORRETO do OneSignal
+// AppId do OneSignal (o seu está correto)
 const ONESIGNAL_APP_ID = 'd8e46df0-d54d-459f-b79d-6e0a36bffdb8';
 
-export function useOneSignal() {
+export function useOneSignal(externalUserId?: string) {
   const initializedRef = useRef(false);
+  const readyPromiseRef = useRef<Promise<void> | null>(null);
   const subscriptionIdRef = useRef<string | null>(null);
 
-  const init = useCallback(async () => {
-    if (initializedRef.current) return;
-
-    try {
-      // Garante que o array existe
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-
-      // Carrega o SDK se necessário
-      if (!window.OneSignal && !document.querySelector('script[data-onesignal]')) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
-          script.defer = true;
-          script.setAttribute('data-onesignal', 'true');
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Failed to load OneSignal SDK'));
-          document.head.appendChild(script);
-        });
-      }
-
-      // Inicializa o OneSignal
-      window.OneSignalDeferred.push(async function(OneSignal: any) {
-        try {
-          console.log('[OneSignal] Iniciando com appId:', ONESIGNAL_APP_ID);
-          
-          await OneSignal.init({
-            appId: ONESIGNAL_APP_ID,
-            allowLocalhostAsSecureOrigin: true,
-            // IMPORTANTE: Usar nosso próprio Service Worker
-            serviceWorkerPath: '/OneSignalSDKWorker.js',
-            serviceWorkerParam: { scope: '/' },
-            notifyButton: {
-              enable: false // Desativa o botão padrão
-            }
-          });
-
-          // Listener para mudanças na subscription
-          OneSignal.User.PushSubscription.addEventListener("change", async (event: any) => {
-            console.log('[OneSignal] Push subscription mudou:', event);
-            
-            if (event.current?.id && event.current.id !== subscriptionIdRef.current) {
-              subscriptionIdRef.current = event.current.id;
-              console.log('[OneSignal] Novo subscriptionId:', event.current.id);
-              
-              // Salva no banco automaticamente quando mudar
-              await saveSubscriptionToSupabase(event.current.id);
-            }
-          });
-
-          // Tenta fazer login do usuário se estiver autenticado
-          try {
-            const { data: userRes } = await supabase.auth.getUser();
-            if (userRes?.user) {
-              console.log('[OneSignal] Fazendo login do usuário:', userRes.user.id);
-              await OneSignal.login(userRes.user.id);
-            }
-          } catch (e) {
-            console.warn('[OneSignal] Login opcional falhou:', e);
-          }
-
-          initializedRef.current = true;
-          console.log('[OneSignal] Inicialização completa');
-        } catch (e) {
-          console.error('[OneSignal] Erro na inicialização:', e);
-        }
-      });
-    } catch (e) {
-      console.error('[OneSignal] Erro ao carregar SDK:', e);
-    }
+  /** Carrega o SDK v16 (somente uma vez) */
+  const loadSdk = useCallback(async () => {
+    if (window.OneSignal || document.querySelector('script[data-onesignal]')) return;
+    await new Promise<void>((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      s.defer = true;
+      s.async = true;
+      s.setAttribute('data-onesignal', 'true');
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Failed to load OneSignal SDK'));
+      document.head.appendChild(s);
+    });
   }, []);
 
-  // Salva a subscription no Supabase
-  const saveSubscriptionToSupabase = async (subscriptionId: string) => {
+  /** Salva/Atualiza a subscription no Supabase */
+  const saveSubscriptionToSupabase = useCallback(async (subscriptionId: string) => {
     try {
       const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.user) {
-        console.warn('[OneSignal] Usuário não autenticado, não salvando subscription');
+      const user = session?.session?.user;
+      if (!user) {
+        console.warn('[OneSignal] Usuário não autenticado; não salvando subscription.');
         return;
       }
 
-      const platform = /Mobile|Android|iP(ad|hone|od)/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
-      const device_os = /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iOS' : 
-                        /Android/.test(navigator.userAgent) ? 'Android' : 
-                        'Desktop';
-      const browser = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) ? 'Safari' :
-                      /Chrome/.test(navigator.userAgent) ? 'Chrome' :
-                      'Other';
-
-      console.log('[OneSignal] Salvando subscription no Supabase:', {
-        subscriptionId,
-        userId: session.session.user.id,
-        platform,
-        device_os,
-        browser
-      });
+      const ua = navigator.userAgent;
+      const platform = /Mobile|Android|iP(ad|hone|od)/i.test(ua) ? 'mobile' : 'desktop';
+      const device_os = /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : 'Desktop';
+      const browser =
+        /Safari/.test(ua) && !/Chrome/.test(ua) ? 'Safari' :
+        /Chrome/.test(ua) ? 'Chrome' : 'Other';
 
       const { data, error } = await supabase
         .from('user_push_subscriptions')
         .upsert(
           {
-            onesignal_player_id: subscriptionId,
-            user_id: session.session.user.id,
+            onesignal_player_id: subscriptionId, // usamos o subscriptionId como chave
+            user_id: user.id,
             platform,
             device_os,
             browser,
             subscribed: true,
             last_seen_at: new Date().toISOString(),
           },
-          { 
-            onConflict: 'onesignal_player_id',
-            ignoreDuplicates: false 
-          }
+          { onConflict: 'onesignal_player_id', ignoreDuplicates: false }
         )
         .select();
 
-      if (error) {
-        console.error('[OneSignal] Erro ao salvar subscription:', error);
-        throw error;
-      }
-
-      console.log('[OneSignal] Subscription salva com sucesso:', data);
+      if (error) throw error;
+      console.log('[OneSignal] Subscription salva/atualizada:', data);
     } catch (e) {
       console.error('[OneSignal] Erro ao salvar no Supabase:', e);
     }
-  };
+  }, []);
 
-  // Solicita permissão e aguarda o subscriptionId
-  const requestPushPermission = useCallback(async () => {
-    console.log('[OneSignal] Solicitando permissão de push...');
-    
-    // Inicializa se necessário
-    if (!initializedRef.current) {
-      await init();
-      // Aguarda um pouco para garantir que está pronto
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+  /** Inicializa o OneSignal v16, faz login do usuário e configura listeners (uma vez) */
+  const init = useCallback(async () => {
+    if (initializedRef.current) return;
+    await loadSdk();
 
-    if (!window.OneSignal) {
-      throw new Error('OneSignal SDK não carregado');
-    }
-
-    try {
-      // Verifica sessão do usuário
-      const { data: sessRes } = await supabase.auth.getSession();
-      if (!sessRes?.session?.user) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      // Solicita permissão nativa primeiro
-      let permission = Notification.permission;
-      console.log('[OneSignal] Permissão atual:', permission);
-
-      if (permission === 'default') {
-        // No iOS Safari PWA, isso vai pedir permissão
-        permission = await Notification.requestPermission();
-        console.log('[OneSignal] Nova permissão:', permission);
-      }
-
-      if (permission !== 'granted') {
-        throw new Error('Permissão de notificação negada');
-      }
-
-      // Agora garante que o OneSignal está inscrito
-      const isSubscribed = await window.OneSignal.User.PushSubscription.optedIn;
-      console.log('[OneSignal] Já inscrito?', isSubscribed);
-
-      if (!isSubscribed) {
-        console.log('[OneSignal] Inscrevendo no OneSignal...');
-        await window.OneSignal.User.PushSubscription.optIn();
-      }
-
-      // Aguarda o subscriptionId ficar disponível (com timeout de 15 segundos)
-      console.log('[OneSignal] Aguardando subscriptionId...');
-      const startTime = Date.now();
-      const timeout = 15000; // 15 segundos
-      
-      while (Date.now() - startTime < timeout) {
-        // Tenta várias formas de obter o ID
-        let id = null;
-        
-        // Método 1: Direto do User.PushSubscription
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    readyPromiseRef.current = new Promise<void>((resolve) => {
+      window.OneSignalDeferred.push(async (OneSignal: any) => {
         try {
-          id = window.OneSignal.User.PushSubscription.id;
-          if (id) {
-            console.log('[OneSignal] ID obtido via User.PushSubscription.id:', id);
+          await OneSignal.init({
+            appId: ONESIGNAL_APP_ID,
+            allowLocalhostAsSecureOrigin: true,        // útil em dev/local
+            serviceWorkerPath: '/osw/OneSignalSDKWorker.js',
+            serviceWorkerParam: { scope: '/osw/' },
+            notifyButton: { enable: false },
+          });
+
+          // logs (dev)
+          try { OneSignal.Debug.setLogLevel?.('trace'); } catch {}
+
+          // === Vincular o usuário (external_id) ===
+          // prioridade: externalUserId recebido no hook; fallback: user do Supabase
+          try {
+            let uid = externalUserId;
+            if (!uid) {
+              const { data: u } = await supabase.auth.getUser();
+              uid = u?.user?.id;
+            }
+            if (uid) {
+              await OneSignal.login(String(uid));
+              console.log('[OneSignal] login(external_id):', uid);
+            } else {
+              console.warn('[OneSignal] Nenhum external_id disponível para login');
+            }
+          } catch (e) {
+            console.warn('[OneSignal] login(external_id) falhou (opcional):', e);
           }
+
+          // Listener: quando a subscription muda (nasce ID, muda optedIn, etc.)
+          OneSignal.User.PushSubscription.addEventListener('change', async (evt: any) => {
+            const id = evt?.current?.id || null;
+            const opted = !!evt?.current?.optedIn;
+            console.log('[OneSignal] PushSubscription change:', { id, opted });
+
+            if (id && id !== subscriptionIdRef.current) {
+              subscriptionIdRef.current = id;
+              await saveSubscriptionToSupabase(id);
+            }
+          });
+
+          initializedRef.current = true;
+          resolve();
+          console.log('[OneSignal] init ok');
         } catch (e) {
-          console.warn('[OneSignal] Erro ao obter ID via User.PushSubscription:', e);
+          console.error('[OneSignal] Erro no init:', e);
+          resolve(); // evita travar caso o init falhe
         }
-        
-        // Método 2: Via getIdAsync (novo no v16)
-        if (!id && window.OneSignal.User?.PushSubscription?.getIdAsync) {
-          try {
-            id = await window.OneSignal.User.PushSubscription.getIdAsync();
-            if (id) {
-              console.log('[OneSignal] ID obtido via getIdAsync:', id);
-            }
-          } catch (e) {
-            console.warn('[OneSignal] Erro ao obter ID via getIdAsync:', e);
-          }
-        }
-        
-        // Método 3: Via User.onesignalId
-        if (!id && window.OneSignal.User?.onesignalId) {
-          try {
-            id = window.OneSignal.User.onesignalId;
-            if (id) {
-              console.log('[OneSignal] ID obtido via User.onesignalId:', id);
-            }
-          } catch (e) {
-            console.warn('[OneSignal] Erro ao obter ID via onesignalId:', e);
-          }
-        }
+      });
+    });
+  }, [externalUserId, loadSdk, saveSubscriptionToSupabase]);
 
-        if (id) {
-          subscriptionIdRef.current = id;
-          console.log('[OneSignal] SubscriptionId obtido com sucesso:', id);
-          
-          // Salva no Supabase
-          await saveSubscriptionToSupabase(id);
-          
-          return id;
-        }
-
-        // Aguarda um pouco antes de tentar novamente
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      // Se chegou aqui, timeout
-      console.error('[OneSignal] Timeout ao aguardar subscriptionId');
-      
-      // Tenta uma última vez de forma síncrona
-      const finalId = window.OneSignal.User?.PushSubscription?.id || 
-                     window.OneSignal.User?.onesignalId;
-      
-      if (finalId) {
-        subscriptionIdRef.current = finalId;
-        await saveSubscriptionToSupabase(finalId);
-        return finalId;
-      }
-
-      throw new Error('Não foi possível obter o ID de inscrição após 15 segundos');
-    } catch (e) {
-      console.error('[OneSignal] Erro ao solicitar permissão:', e);
-      throw e;
-    }
+  /** Garante que o init terminou antes de seguir */
+  const ensureReady = useCallback(async () => {
+    if (!initializedRef.current) await init();
+    if (readyPromiseRef.current) await readyPromiseRef.current;
   }, [init]);
 
-  // Inicializa automaticamente quando o hook é usado
+  /** Pede permissão e conclui a inscrição (opt-in). Retorna o subscriptionId. */
+  const enablePush = useCallback(async () => {
+    await ensureReady();
+    const OS = window.OneSignal;
+    if (!OS) throw new Error('OneSignal SDK não carregado');
+
+    // exige usuário autenticado (pra salvar no Supabase)
+    const { data: sessRes } = await supabase.auth.getSession();
+    if (!sessRes?.session?.user) throw new Error('Usuário não autenticado');
+
+    // fluxo recomendado no v16 (melhor para iOS PWA)
+    await OS.Notifications.requestPermission();
+    if (!OS.User?.PushSubscription?.optedIn) {
+      await OS.User.PushSubscription.optIn();
+    }
+
+    // captura o subscriptionId (com polling de 15s por segurança)
+    let id: string | null =
+      OS.User?.PushSubscription?.id ||
+      (await OS.User?.PushSubscription?.getIdAsync?.()) ||
+      OS.User?.onesignalId ||
+      null;
+
+    const start = Date.now();
+    while (!id && Date.now() - start < 15000) {
+      await new Promise((r) => setTimeout(r, 500));
+      id =
+        OS.User?.PushSubscription?.id ||
+        (await OS.User?.PushSubscription?.getIdAsync?.()) ||
+        OS.User?.onesignalId ||
+        null;
+    }
+
+    if (!id) throw new Error('Não foi possível obter o ID de inscrição');
+
+    if (id !== subscriptionIdRef.current) {
+      subscriptionIdRef.current = id;
+      await saveSubscriptionToSupabase(id);
+    }
+    return id;
+  }, [ensureReady, saveSubscriptionToSupabase]);
+
+  // dispara init automaticamente ao usar o hook
   useEffect(() => {
     init();
   }, [init]);
 
-  return { 
-    requestPushPermission, 
+  return {
+    /** chame no clique do botão "Ativar notificações" */
+    enablePush,
+    /** utilitários */
     isReady: () => initializedRef.current,
-    getSubscriptionId: () => subscriptionIdRef.current
+    getSubscriptionId: () => subscriptionIdRef.current,
   };
 }
