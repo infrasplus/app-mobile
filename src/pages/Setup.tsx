@@ -442,15 +442,16 @@ const candidate =
         {!error ? (
           <>
             {/* Título dentro do box */}
-            <h1 className="text-lg font-semibold text-center mb-4 flex items-center justify-center gap-2">
-              {!installed && (<AlertCircle className="h-5 w-5 text-muted-foreground" aria-hidden="true" />)}
-              <span>{installed ? 'Ativando acesso…' : 'Adicione o app à Tela de Início'}</span>
+            <h1 className="text-lg font-semibold text-center mb-4">
+              {installed ? 'Ativando acesso…' : 'Adicione o app à Tela de Início'}
             </h1>
 
             <div className="flex items-start gap-3">
               {installed ? (
                 <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
-              ) : null}
+              ) : (
+                <AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
+              )}
               <div className="flex-1">
                 {!installed ? (
                   isIOS ? (
