@@ -13,14 +13,25 @@ import { useEffect, useState, useRef } from 'react';
 import { useOneSignal } from '@/hooks/useOneSignal';
 import { toast } from '@/hooks/use-toast';
 
+const PERSIST_KEY = 'push_last_known_enabled';
 
 const Dashboard = () => {
   const { showNotificationBanner, dismissNotificationBanner } = useAuth();
   
   const { enablePush, isReady } = useOneSignal();
 
+  const initialPersistedEnabled = (() => {
+    try {
+      const persisted = typeof localStorage !== 'undefined' && localStorage.getItem(PERSIST_KEY) === '1';
+      const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+      return Boolean(persisted && perm !== 'denied');
+    } catch {
+      return false;
+    }
+  })();
+
   const [oneSignalReady, setOneSignalReady] = useState(false);
-  const [isPushEnabled, setIsPushEnabled] = useState<boolean>(false);
+  const [isPushEnabled, setIsPushEnabled] = useState<boolean>(initialPersistedEnabled);
 
 
   // Dialog para reativação quando o sistema bloqueia notificações
@@ -34,7 +45,7 @@ const Dashboard = () => {
   const isAndroid = /Android/.test(ua);
 
   // Estados auxiliares estáveis
-  const hasEverEnabled = useRef(false);
+  const hasEverEnabled = useRef(initialPersistedEnabled);
   const unstableDisabledCount = useRef(0);
 
   const computeEnabled = async () => {
@@ -97,6 +108,7 @@ const Dashboard = () => {
         if (!granted) {
           unstableDisabledCount.current = 0;
           hasEverEnabled.current = false;
+          try { localStorage.setItem(PERSIST_KEY, '0'); } catch {}
           setIsPushEnabled(false);
           return;
         }
@@ -110,6 +122,7 @@ const Dashboard = () => {
         if (enabled) {
           hasEverEnabled.current = true;
           unstableDisabledCount.current = 0;
+          try { localStorage.setItem(PERSIST_KEY, '1'); } catch {}
           setIsPushEnabled(true);
           return;
         }
@@ -118,6 +131,7 @@ const Dashboard = () => {
           // Requer algumas leituras consecutivas para considerar realmente desligado
           unstableDisabledCount.current += 1;
           if (unstableDisabledCount.current >= 5) {
+            try { localStorage.setItem(PERSIST_KEY, '0'); } catch {}
             setIsPushEnabled(false);
             hasEverEnabled.current = false;
           }
@@ -210,6 +224,7 @@ const handleNotificationPermission = async () => {
       setIsPushEnabled(true);
       hasEverEnabled.current = true;
       unstableDisabledCount.current = 0;
+      try { localStorage.setItem(PERSIST_KEY, '1'); } catch {}
       dismissNotificationBanner();
       setChecking(false);
       setActivating(false);
@@ -243,6 +258,7 @@ const verifyAfterSettings = async () => {
     if (enabled) {
       hasEverEnabled.current = true;
       unstableDisabledCount.current = 0;
+      try { localStorage.setItem(PERSIST_KEY, '1'); } catch {}
       dismissNotificationBanner();
       setReauthDialogOpen(false);
     } else {
