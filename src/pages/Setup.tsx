@@ -145,9 +145,14 @@ const Setup: React.FC = () => {
       setStatus(phrases[i]);
     }, 2000);
     const start = Date.now();
+    const minMs = 2000; // splash mínima de 2s
     try {
       while (!isReady() && Date.now() - start < timeoutMs) {
         await new Promise((r) => setTimeout(r, 300));
+      }
+      const elapsed = Date.now() - start;
+      if (elapsed < minMs) {
+        await new Promise((r) => setTimeout(r, minMs - elapsed));
       }
     } finally {
       clearInterval(interval);
@@ -301,16 +306,13 @@ const Setup: React.FC = () => {
   if (installed && status && !error) {
     return (
       <div className="h-screen bg-white flex flex-col items-center justify-center overflow-hidden" style={{ height: '100vh', overflow: 'hidden', backgroundColor: '#fff' }}>
-        <div className="flex flex-col items-center space-y-4">
-          <img 
-            src={loaderWebp} 
-            alt="Carregando"
-            loading="eager"
-            fetchPriority="high"
-            className="w-[150px] h-[150px] object-contain"
-          />
-          <p className="text-sm text-muted-foreground">Configurando</p>
-        </div>
+        <img 
+          src={loaderWebp} 
+          alt="Carregando"
+          loading="eager"
+          fetchPriority="high"
+          className="w-[100px] h-[100px] object-contain"
+        />
       </div>
     );
   }
