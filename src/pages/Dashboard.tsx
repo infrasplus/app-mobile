@@ -22,14 +22,6 @@ const Dashboard = () => {
   const [oneSignalReady, setOneSignalReady] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState<boolean>(typeof Notification !== 'undefined' ? Notification.permission === 'granted' : false);
 
-  // Boot gating: mantém a tela de loading até tudo estar pronto
-  const [booting, setBooting] = useState(true);
-  const bootMessages = [
-    'Preparando notificações...',
-    'Conectando ao serviço...',
-    'Sincronizando seu dispositivo...'
-  ];
-  const [bootMessageIndex, setBootMessageIndex] = useState(0);
 
   // Dialog para reativação quando o sistema bloqueia notificações
   const [reauthDialogOpen, setReauthDialogOpen] = useState(false);
@@ -75,33 +67,6 @@ const Dashboard = () => {
     return () => clearTimeout(t);
   }, [isReady]);
 
-  // Boot: mantém a tela de carregamento até OneSignal estar pronto e status inicial calculado
-  useEffect(() => {
-    const rot = setInterval(() => {
-      setBootMessageIndex((i) => (i + 1) % bootMessages.length);
-    }, 2000);
-
-    const run = async () => {
-      // Espera OneSignal ficar pronto (até 12s)
-      if (!isReady()) {
-        const start = Date.now();
-        while (!isReady() && Date.now() - start < 12000) {
-          await new Promise((r) => setTimeout(r, 150));
-        }
-      }
-      setOneSignalReady(isReady());
-
-      const enabled = await computeEnabled();
-      setIsPushEnabled(enabled);
-      if (enabled) {
-        dismissNotificationBanner();
-      }
-      setBooting(false);
-    };
-    void run();
-
-    return () => clearInterval(rot);
-  }, [isReady, dismissNotificationBanner, bootMessages.length]);
 
   const notifications = [
     {
@@ -185,29 +150,29 @@ const Dashboard = () => {
 
 const handleNotificationPermission = async () => {
   try {
-    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
-    const OS = (window as any).OneSignal;
+    // Tente habilitar primeiro para evitar diálogos desnecessários
+    const subscriptionId = await enablePush().catch(() => null);
 
-    // Se o navegador marcou como "negado", ou no iOS o sistema bloqueou, abrimos instruções
-    if (perm === 'denied' || (isIOS && perm === 'granted' && !isPushEnabled)) {
-      setReauthDialogOpen(true);
-      return;
-    }
-
-    const subscriptionId = await enablePush();
     const enabled = await waitForEnabled();
-
     if (enabled && subscriptionId) {
       setIsPushEnabled(true);
       dismissNotificationBanner();
       return;
     }
 
-    // Se ainda não habilitou (ex.: bloqueio no sistema), abrir instruções
-    setReauthDialogOpen(true);
-  } catch (e: any) {
+    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+
+    // Abre o diálogo apenas se estiver realmente bloqueado
+    if (perm === 'denied' || (isIOS && perm === 'granted' && !enabled)) {
+      setReauthDialogOpen(true);
+    }
+    // Caso contrário, mantemos o banner e o usuário pode tentar novamente
+  } catch (e) {
     console.error('[Dashboard] Falha ao ativar notificações:', e);
-    setReauthDialogOpen(true);
+    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+    if (perm === 'denied') {
+      setReauthDialogOpen(true);
+    }
   }
 };
 
@@ -229,18 +194,6 @@ const verifyAfterSettings = async () => {
   }
 };
 
-  if (booting) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground">{bootMessages[bootMessageIndex]}</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
