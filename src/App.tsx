@@ -5,7 +5,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import Dashboard from "./pages/Dashboard";
-import PreviewDashboard from "./pages/PreviewDashboard";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import NotificationSettings from "./pages/NotificationSettings";
@@ -50,66 +49,60 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => (
-  <BrowserRouter>
-    <Routes>
-      {/* LOVABLE PREVIEW: Rota completamente isolada */}
-      <Route path="/preview" element={<PreviewDashboard />} />
-      
-      {/* Rotas principais com providers completos */}
-      <Route path="/*" element={
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <Sonner />
-            <Routes>
-              <Route path="/setup" element={<Setup />} />
-              <Route path="/api/generate-link" element={<ApiGenerateLink />} />
-              <Route 
-                path="/" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/notifications" 
-                element={
-                  <ProtectedRoute>
-                    <Notifications />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/settings" 
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/notification-settings" 
-                element={
-                  <ProtectedRoute>
-                    <NotificationSettings />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </QueryClientProvider>
-      } />
-    </Routes>
-  </BrowserRouter>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <Sonner />
+      <BrowserRouter>
+          <Routes>
+            {/* Página pública para preparar instalação e ativar login pós-instalação */}
+            <Route path="/setup" element={<Setup />} />
+
+            <Route path="/api/generate-link" element={<ApiGenerateLink />} />
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/notifications" 
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/notification-settings" 
+              element={
+                <ProtectedRoute>
+                  <NotificationSettings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </QueryClientProvider>
 );
 
 export default App;
