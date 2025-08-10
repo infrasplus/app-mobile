@@ -17,7 +17,7 @@ import { TestNotificationSender } from '@/components/TestNotificationSender';
 const Dashboard = () => {
   const { showNotificationBanner, dismissNotificationBanner } = useAuth();
   const navigate = useNavigate();
-  const { requestPushPermission, isReady } = useOneSignal();
+  const { enablePush, isReady } = useOneSignal();
 
   const [oneSignalReady, setOneSignalReady] = useState(false);
   useEffect(() => {
@@ -47,7 +47,7 @@ const Dashboard = () => {
 const handleNotificationPermission = async () => {
   try {
     console.log('[Dashboard] Iniciando processo de permissão...');
-    const subscriptionId = await requestPushPermission();
+    const subscriptionId = await enablePush();
     console.log('[Dashboard] Subscription ID obtido:', subscriptionId);
     
     // Mostra feedback visual de sucesso
